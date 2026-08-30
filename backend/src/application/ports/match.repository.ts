@@ -5,8 +5,16 @@ export interface PersistedMatch extends MatchResult {
   positionId: string;
 }
 
+export interface MatchWithStatus extends PersistedMatch {
+  statut: string;
+}
+
 export interface MatchRepository {
   // Écrit ou met à jour le match pour cette paire musicien/poste — jamais de
   // création de match côté client, uniquement via ce use case interne.
   upsert(match: PersistedMatch): Promise<void>;
+
+  // Lecture des matchs déjà calculés pour un musicien, triés par score
+  // décroissant — utilisé par le controller pour l'affichage.
+  findByMusicianId(musicianId: string): Promise<MatchWithStatus[]>;
 }
