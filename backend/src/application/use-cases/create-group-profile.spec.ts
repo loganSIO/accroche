@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CreateGroupProfile } from './create-group-profile.js';
+import { CreateGroupProfile } from './create-group-profile.ts';
 import type { GroupRepository, CreateGroupInput, GroupCandidate } from '../ports/group.repository.js';
 
 function buildInput(overrides: Partial<CreateGroupInput> = {}): CreateGroupInput {
