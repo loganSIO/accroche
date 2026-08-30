@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Compte technique ---------------------------------------------------
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  city      String
+  // A surveiller le formatage de la date)
+  createdAt DateTime @default(now())
+
+  musicianProfile MusicianProfile?
+  groupProfiles   GroupProfile[]
+
+  @@map("users")
+}
+
+// --- Statuts ---------------------------------------------------------------
+
+enum MemberStatus {
+  AMATEUR
+  PRO
+}
+
+enum GroupStatus {
+  // Quid du statut amateur ?
+  ASSOCIATION
+  PROFESSIONNEL
+}
+
+enum PositionStatus {
+  OUVERT
+  POURVU
+  ANNULE
+}
+
+enum MatchStatus {
+  PROPOSE
+  CONTACTE
+  IGNORE
+}
+
+enum PositionOwnerType {
+  GROUP
+  FOUNDING
+}
+
+// --- Zone géographique (objet dédié) --------------------------------------
+
+model Zone {
+  id        String  @id @default(uuid())
+  latitude  Float
+  longitude Float
+  rayonKm   Float
+  ville     String
+
+  musicianProfiles MusicianProfile[]
+  groupProfiles    GroupProfile[]
+  foundingProfiles FoundingProfile[]
+
+  @@map("zones")
+}
+
+// --- Profil musicien --------------------------------------------------
+
+model MusicianProfile {
+  id        String       @id @default(uuid())
+  userId    String       @unique
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zoneId    String
+  zone      Zone         @relation(fields: [zoneId], references: [id])
+  status    MemberStatus
+  objective String[]
+  bio       String?
+  createdAt DateTime     @default(now())
+  // L'update du profil on peut carrément l'afficher !
+  // Garder en tête la dernière activité du profil (pour les profils fantômes)
+  updatedAt DateTime     @updatedAt
+
+  instruments      MusicianInstrument[]
+  styles           MusicianStyle[]
+  availabilities   Availability[]
+  matches          Match[]
+  foundingProfiles FoundingProfile[]
+  contacts         Contact[]
+
+  @@map("musician_profiles")
+}
+
+model MusicianInstrument {
+  id                String          @id @default(uuid())
+  musicianProfileId String
+  musicianProfile   MusicianProfile @relation(fields: [musicianProfileId], references: [id], onDelete: Cascade)
+  instrument        String
+  niveau            String
+  // L'instrument lui même ? (marque etc)
+
+  @@map("musician_instruments")
+}
+
+model MusicianStyle {
+  id                String          @id @default(uuid())
+  musicianProfileId String
+  musicianProfile   MusicianProfile @relation(fields: [musicianProfileId], references: [id], onDelete: Cascade)
+  style             String
+
+  @@map("musician_styles")
+}
+
+model Availability {
+  id                String          @id @default(uuid())
+  musicianProfileId String
+  musicianProfile   MusicianProfile @relation(fields: [musicianProfileId], references: [id], onDelete: Cascade)
+  jourSemaine       String
+  creneauxJournee   String
+
+  @@map("availabilities")
+}
+
+// --- Profil groupe ------------------------------------------------------
+
+model GroupProfile {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zoneId      String
+  zone        Zone        @relation(fields: [zoneId], references: [id])
+  name        String
+  styles      String[]
+  status      GroupStatus
+  description String?
+  // AudioLinks : intégration direct de l'audio sur l'appli ?
+  audioLinks  String[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  positions OpenPosition[]
+
+  @@map("group_profiles")
+}
+
+// --- Profil fondateur ("monter un groupe", version light) --------------
+
+model FoundingProfile {
+  id                String          @id @default(uuid())
+  founderMusicianId String
+  founderMusician   MusicianProfile @relation(fields: [founderMusicianId], references: [id], onDelete: Cascade)
+  zoneId            String
+  zone              Zone            @relation(fields: [zoneId], references: [id])
+  styles            String[]
+  description       String?
+  createdAt         DateTime        @default(now())
+
+  positions OpenPosition[]
+
+  @@map("founding_profiles")
+}
+
+// --- Poste ouvert --------------------------------------------------------
+
+model OpenPosition {
+  // un poste appartient à un groupe ou à un profil fondateur, 
+  // jamais les deux en même temps. Prisma ne peut pas garantir 
+  // ça tout seul au niveau base de données
+  id                  String            @id @default(uuid())
+  ownerType           PositionOwnerType
+  groupProfileId      String?
+  groupProfile        GroupProfile?     @relation(fields: [groupProfileId], references: [id], onDelete: Cascade)
+  foundingProfileId   String?
+  foundingProfile     FoundingProfile?  @relation(fields: [foundingProfileId], references: [id], onDelete: Cascade)
+  instrumentRecherche String
+  niveauAttendu       String
+  statut              PositionStatus    @default(OUVERT)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  matches Match[]
+
+  @@map("open_positions")
+}
+
+// --- Match : résultat de calcul -------------------------------------------
+
+model Match {
+  id         String          @id @default(uuid())
+  musicianId String
+  musician   MusicianProfile @relation(fields: [musicianId], references: [id], onDelete: Cascade)
+  positionId String
+  position   OpenPosition    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  scoreGlobal        Float
+  scoreInstrument     Float
+  scoreStyle          Float
+  scoreZone           Float
+  scoreDisponibilite  Float
+  scoreNiveau         Float
+
+  statut    MatchStatus @default(PROPOSE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  contact Contact?
+
+  @@unique([musicianId, positionId])
+  @@map("matches")
+}
+
+// --- Contact : action humaine ---------------------------------------------
+
+model Contact {
+  id          String          @id @default(uuid())
+  matchId     String          @unique
+  match       Match           @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  musicianId  String
+  musician    MusicianProfile @relation(fields: [musicianId], references: [id])
+  initiatedBy String
+  createdAt   DateTime        @default(now())
+
+  @@map("contacts")
+}
