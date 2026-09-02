@@ -1,0 +1,1 @@
+export function MapPanel() { return <div className="placeholder-panel" aria-label="Carte des profils"><div><div className="placeholder-icon">◉</div><h2>Carte des profils</h2><p>La carte publique sera intégrée lors de la Phase 2.</p></div></div>; }

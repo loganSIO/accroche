@@ -1,0 +1,3 @@
+import type { AppRoute } from '../App';
+import { MapPanel } from '../components/map/MapPanel';
+export function HomePage({ onNavigate }: { onNavigate: (route: AppRoute) => void }) { return <><section className="hero"><div><span className="eyebrow">Trouver votre prochaine scène</span><h1>La bonne rencontre musicale commence ici.</h1><p>Accroche met en relation les musiciens et les groupes grâce à des correspondances expliquées.</p><div className="hero-actions"><button className="button button-primary" onClick={() => onNavigate('/discover')}>Découvrir les profils</button><button className="button button-secondary">Créer un compte</button></div></div><MapPanel /></section></>; }
