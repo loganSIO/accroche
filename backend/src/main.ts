@@ -1,9 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Active CORS afin d'autoriser les requêtes provenant
+  // d'une origine différente de celle du backend.
+  app.enableCors();
 
   // Applique automatiquement les règles de validation des DTOs
   // (class-validator) à chaque requête entrante. whitelist retire les champs

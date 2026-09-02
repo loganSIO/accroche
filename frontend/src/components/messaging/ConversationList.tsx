@@ -1,0 +1,2 @@
+import type { Conversation } from '../../types/message';
+export function ConversationList({ conversations = [] }: { conversations?: Conversation[] }) { return <section className="surface-card"><h2>Conversations</h2>{conversations.length === 0 ? <p>Vos conversations apparaîtront ici.</p> : conversations.map((conversation) => <p key={conversation.id}>{conversation.participantName}</p>)}</section>; }
