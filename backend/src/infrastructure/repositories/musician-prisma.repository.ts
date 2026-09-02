@@ -48,7 +48,7 @@ export class MusicianPrismaRepository implements MusicianRepository {
           userId: user.id,
           zoneId: zone.id,
           status: input.status.toUpperCase() as 'AMATEUR' | 'PRO',
-          objective: [],
+          objective: input.objective ?? [],
           bio: input.bio,
           instruments: { create: input.instruments },
           styles: { create: input.styles.map((style) => ({ style })) },

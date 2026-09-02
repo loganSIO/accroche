@@ -1,4 +1,3 @@
-import { request } from './client';
 export interface RegisterAccountInput {
   email: string;
   password: string;
@@ -11,14 +10,12 @@ export interface RegisterAccountInput {
     availabilities: { jourSemaine: string; creneauxJournee: string }[];
     bio?: string;
   };
-  groups: Array<{
+  groups: {
     name: string;
     styles: string[];
     status: 'association' | 'professionnel';
     description?: string;
     audioLinks: string[];
     requestedInstruments: { instrument: string; niveau: string }[];
-  }>;
+  }[];
 }
-export const registerAccount = (input: RegisterAccountInput) =>
-  request<{ userId: string; musicianProfileId: string | null; groupIds: string[] }>('/accounts', { method: 'POST', body: JSON.stringify(input) });
