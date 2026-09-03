@@ -1,11 +1,22 @@
 import { prisma } from '../prisma.client.js';
 import type { RegisterAccountInput } from '../../application/ports/account.repository.js';
+import type { PasswordHasher } from '../../application/ports/password-hasher.js';
 
+// TODO: ce repository est appelé directement par le controller, sans passer
+// par un use case dédié (contrairement au pattern Port/Use case/Repository
+// suivi ailleurs dans le projet — cf. musicien/groupe). À corriger dans une
+// PR séparée : extraire un use case RegisterAccount qui orchestre le
+// hashage et l'appel au repository, comme CreateMusicianProfile /
+// CreateGroupProfile le font déjà.
 export class AccountPrismaRepository {
+  constructor(private readonly passwordHasher: PasswordHasher) {}
+
   async register(input: RegisterAccountInput) {
+    const hashedPassword = await this.passwordHasher.hash(input.password);
+
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { email: input.email, password: input.password, city: input.zone.ville },
+        data: { email: input.email, password: hashedPassword, city: input.zone.ville },
       });
       const musicianZone = input.musician ? await tx.zone.create({ data: input.zone }) : null;
       const musician = input.musician

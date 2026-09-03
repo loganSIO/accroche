@@ -105,4 +105,13 @@ describe('RegisterAccountController (intégration réelle avec Postgres)', () =>
     expect(await prisma.groupProfile.count()).toBe(0);
     expect(await prisma.musicianProfile.count()).toBe(1);
   });
+
+  it('hache le mot de passe avant de le stocker en base', async () => {
+  const result = await controller.register(buildDto({ password: 'secret-en-clair' }));
+
+  const user = await prisma.user.findUnique({ where: { id: result.data.userId } });
+
+  expect(user?.password).toBeDefined();
+  expect(user?.password).not.toBe('secret-en-clair');
+  });
 });
