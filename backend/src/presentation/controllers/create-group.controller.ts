@@ -2,10 +2,11 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { CreateGroupProfile } from '../../application/use-cases/create-group-profile.js';
 import { GroupPrismaRepository } from '../../infrastructure/repositories/group-prisma.repository.js';
 import { CreateGroupDto } from '../dtos/create-group.dto.js';
+import { BcryptPasswordHasher } from '../../infrastructure/security/bcrypt-password-hasher.js';
 
 @Controller('api/v1/groups')
 export class CreateGroupController {
-  private readonly createGroupProfile = new CreateGroupProfile(new GroupPrismaRepository());
+  private readonly createGroupProfile = new CreateGroupProfile(new GroupPrismaRepository(), new BcryptPasswordHasher(),);
 
   @Post()
   async create(@Body() dto: CreateGroupDto) {
