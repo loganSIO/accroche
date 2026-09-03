@@ -11,5 +11,5 @@ export interface GroupProfile {
   status: GroupStatus; description?: string; audioLinks: string[];
 }
 export interface FoundingProfile {
-  id: string; zone: Zone; styles: string[]; description?: string;
+  id: string; founderMusicianId: string; zone: Zone; styles: string[]; description?: string;
 }
