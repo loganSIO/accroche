@@ -3,10 +3,11 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { MusiciansController } from './presentation/controllers/musicians.controller.js';
 import { RegisterAccountController } from './presentation/controllers/register-account.controller.js';
+import { GroupsController } from './presentation/controllers/groups.controller.js';
 
 @Module({
   imports: [],
-  controllers: [AppController, MusiciansController, RegisterAccountController],
+  controllers: [AppController, MusiciansController, GroupsController, RegisterAccountController],
   providers: [AppService],
 })
 export class AppModule {}

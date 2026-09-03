@@ -70,3 +70,41 @@ describe('MusiciansController (intégration réelle avec Postgres)', () => {
     });
   });
 });
+
+describe('MusiciansController.getById (intégration réelle avec Postgres)', () => {
+  const controller = new MusiciansController();
+
+  beforeEach(cleanDatabase);
+  afterEach(cleanDatabase);
+
+  it('retourne le musicien au format {data, meta} quand il existe', async () => {
+    const zone = await prisma.zone.create({
+      data: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+    });
+    const user = await prisma.user.create({
+      data: { email: 'm@example.com', password: 'hash', city: 'Strasbourg' },
+    });
+    const musician = await prisma.musicianProfile.create({
+      data: {
+        userId: user.id,
+        zoneId: zone.id,
+        status: 'AMATEUR',
+        objective: ['join_group'],
+        instruments: { create: [{ instrument: 'guitare', niveau: 'avance' }] },
+        styles: { create: [{ style: 'rock' }] },
+        availabilities: { create: [{ jourSemaine: 'mardi', creneauxJournee: 'soir' }] },
+      },
+    });
+
+    const result = await controller.getById(musician.id);
+
+    expect(result.meta.version).toBe('v1');
+    expect(result.data.id).toBe(musician.id);
+    expect(result.data.status).toBe('amateur');
+    expect(result.data.instruments).toEqual([{ instrument: 'guitare', niveau: 'avance' }]);
+  });
+
+  it("lève une 404 si le musicien n'existe pas", async () => {
+    await expect(controller.getById('id-inexistant')).rejects.toThrow('Musicien id-inexistant introuvable.');
+  });
+});
