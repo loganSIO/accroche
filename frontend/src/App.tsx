@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Footer } from './components/layout/Footer';
 import { Header } from './components/layout/Header';
+import { AuthModal } from './components/layout/AuthModal';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { HomePage } from './pages/HomePage';
 import { MessagingPage } from './pages/MessagingPage';
@@ -16,6 +17,7 @@ function routeFromLocation(): AppRoute {
 
 function App() {
   const [route, setRoute] = useState<AppRoute>(routeFromLocation);
+  const [authMode, setAuthMode] = useState<'login' | 'register' | null>(null);
 
   useEffect(() => {
     const handlePopState = () => setRoute(routeFromLocation());
@@ -30,13 +32,14 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Header currentRoute={route} onNavigate={navigate} />
+      <Header currentRoute={route} onNavigate={navigate} onAuth={setAuthMode} />
       <main className="page-content">
-        {route === '/' && <HomePage onNavigate={navigate} />}
+        {route === '/' && <HomePage onNavigate={navigate} onAuth={setAuthMode} />}
         {route === '/discover' && <DiscoverPage />}
         {route === '/messages' && <MessagingPage />}
       </main>
       <Footer />
+      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} />}
     </div>
   );
 }

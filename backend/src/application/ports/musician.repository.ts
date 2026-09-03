@@ -6,6 +6,7 @@ export interface CreateMusicianInput {
   city: string;
   status: 'amateur' | 'pro';
   bio?: string;
+  objective?: string[];
   instruments: { instrument: string; niveau: string }[];
   styles: string[];
   availabilities: { jourSemaine: string; creneauxJournee: string }[];
