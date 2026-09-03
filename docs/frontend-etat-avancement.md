@@ -161,6 +161,16 @@ Les limites backend restantes sont :
 - pas de route pour les profils publics de la carte ;
 - pas de route de création de profil founding.
 
+### Mise à jour post-merge
+
+Le hashage bcrypt des mots de passe (introduit sur `POST /musicians` et
+`POST /groups` avant leur suppression) a été rattaché à
+`AccountPrismaRepository` lors de la résolution du conflit avec la PR
+bcrypt. Un TODO reste dans le code notant l'absence de use case dédié
+entre `RegisterAccountController` et le repository — à traiter dans une
+PR de suivi, cf. pattern Port/Use case/Repository déjà utilisé côté
+musicien et groupe.
+
 ### Tests de la route de compte unique
 
 Le comportement de `POST /api/v1/accounts` est couvert par

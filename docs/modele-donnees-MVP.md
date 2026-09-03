@@ -64,9 +64,9 @@ Résultat du calcul de compatibilité entre un `MusicianProfile` et un `OpenPosi
 
 ### `Contact`
 Trace qu'une mise en relation a réellement eu lieu. Distinct du `Match` : un match est un calcul automatique, un contact est une action humaine.
-- `id`, `match_id`, `initiated_by` (musician ou group), `created_at`
+- `id`, `match_id`, `musician_id`, `initiated_by` (musician ou group), `created_at`
 
-*Pourquoi cette séparation* : c'est elle qui permettra de mesurer proprement l'indicateur clé du go-to-market — le taux de matchs qui débouchent sur un contact réel — sans ambiguïté entre "calculé" et "agi".
+*Pourquoi `musician_id` en plus de `match_id`* : un `Match` relie déjà `musician_id` et `position_id`, donc `musician_id` sur `Contact` est techniquement dérivable par jointure. Il est stocké en accès direct pour éviter cette jointure sur les lectures fréquentes (ex. lister les contacts d'un musicien). Décision d'implémentation actée a posteriori (le schéma l'avait introduit avant que ce document ne le documente) — champ dérivé, pas de nouvelle source de vérité.
 
 ## Ce que le schéma anticipe sans le construire
 

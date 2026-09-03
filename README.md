@@ -122,6 +122,35 @@ Voir `docs/plan-action-backend.md` (backend) et `docs/plan-frontend-simon.md` (f
 - Hashage des mots de passe — **à faire avant tout déploiement réel**, pas fait dans le code actuel
 - Librairie de carte, gestion d'état frontend — à trancher ensemble, pas unilatéralement
 
+## Routes de gestion de compte — contrat
+
+Deux familles de routes distinctes, à ne pas confondre :
+
+### `POST /api/v1/accounts` — inscription initiale (one-shot)
+Crée en une seule transaction un `User` unique avec, au choix :
+- un `MusicianProfile` (optionnel)
+- un ou plusieurs `GroupProfile`, avec leurs `OpenPosition` associées
+
+Route pensée pour le formulaire d'inscription complet. Remplace les anciennes
+routes `POST /musicians` et `POST /groups` (retirées), qui créaient chacune
+un `User` séparé — source potentielle de doublons de compte pour une même
+personne.
+
+### `POST /api/v1/users/me/*` — ajout ultérieur sur un compte existant
+*(à venir — non encore implémenté)*
+
+Chemin prévu pour rattacher un nouveau profil (groupe, founding) à un `User`
+déjà créé, sans repasser par l'inscription complète. Ex. : un musicien déjà
+inscrit qui décide plus tard de créer un groupe.
+
+- `POST /users/me/groups`
+- `POST /users/me/founding-profile`
+- `POST /users/me/musician-profile`
+
+**Règle** : `POST /accounts` ne doit jamais être utilisée pour ajouter un
+profil à un compte existant — c'est strictement la route d'inscription
+initiale.
+
 ## Pour une IA qui reprend ce projet
 
 Lire dans l'ordre : ce fichier → `docs/modele-donnees-MVP.md` → `docs/architecture-couches-MVP.md` → un exemple existant complet (ressource `musician` ou `group`, les 6 fichiers du pattern ci-dessus) avant d'écrire quoi que ce soit de nouveau. Toujours lancer `npm run test` avant et après toute modification.
