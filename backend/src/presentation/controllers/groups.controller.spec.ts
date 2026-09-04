@@ -49,8 +49,6 @@ describe('GroupsController.getById (intégration réelle avec Postgres)', () => 
   it("lève une 404 si le groupe n'existe pas", async () => {
     await expect(controller.getById('id-inexistant')).rejects.toThrow('Groupe id-inexistant introuvable.');
   });
-<<<<<<< HEAD
-=======
 });
 
 describe('GroupsController.createPosition (intégration réelle avec Postgres)', () => {
@@ -86,5 +84,4 @@ describe('GroupsController.createPosition (intégration réelle avec Postgres)',
       controller.createPosition('id-inexistant', { instrument: 'basse', niveau: 'intermediaire' }),
     ).rejects.toThrow('Groupe id-inexistant introuvable.');
   });
->>>>>>> 06c805c (Ajout POST /groups/:groupId/positions)
 });
