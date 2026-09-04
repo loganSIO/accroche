@@ -22,7 +22,6 @@ describe('MusiciansController (intégration réelle avec Postgres)', () => {
 
   it("retourne un tableau vide si le musicien n'a aucun match", async () => {
     const result = await controller.getMatches('id-inexistant');
-
     expect(result.data).toEqual([]);
     expect(result.meta.version).toBe('v1');
   });
@@ -58,9 +57,7 @@ describe('MusiciansController (intégration réelle avec Postgres)', () => {
         scoreNiveau: 100,
       },
     });
-
     const result = await controller.getMatches(musician.id);
-
     expect(result.data).toHaveLength(1);
     expect(result.data[0]).toEqual({
       positionId: position.id,
@@ -82,7 +79,7 @@ describe('MusiciansController.getById (intégration réelle avec Postgres)', () 
       data: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
     });
     const user = await prisma.user.create({
-      data: { email: 'm@example.com', password: 'hash', city: 'Strasbourg' },
+      data: { email: 'm2@example.com', password: 'hash', city: 'Strasbourg' },
     });
     const musician = await prisma.musicianProfile.create({
       data: {

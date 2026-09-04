@@ -30,7 +30,6 @@ export class MusiciansController {
   @Get(':id/matches')
   async getMatches(@Param('id') id: string): Promise<{ data: MatchResponseDto[]; meta: { timestamp: string; version: string } }> {
     const matches = await this.matchRepository.findByMusicianId(id);
-
     return {
       data: matches.map((m) => ({
         positionId: m.positionId,
