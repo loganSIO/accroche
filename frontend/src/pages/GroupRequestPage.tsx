@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CityField } from '../components/profile/CityField';
 import type { AppRoute } from '../App';
 import type { PositionLevel, RegisterGroupInput } from '../api/users';
 
@@ -57,7 +58,7 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
       <fieldset className="surface-card">
         <legend>Le groupe</legend>
         <label>Nom du groupe<input required value={name} onChange={(event) => setName(event.target.value)} /></label>
-        <label>Ville<input required value={city} onChange={(event) => setCity(event.target.value)} /></label>
+        <CityField value={city} onChange={setCity} id="group-french-cities" />
         <label>Description<textarea required rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Présentez votre projet musical..." /></label>
         <span className="field-label">Styles musicaux</span>
         <div className="choice-grid">{styles.map((style) => <label className="choice" key={style}><input type="checkbox" checked={groupStyles.includes(style)} onChange={() => toggleStyle(style)} />{style}</label>)}</div>

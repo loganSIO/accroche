@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CityField } from '../components/profile/CityField';
 import type { GroupStatus, PositionLevel } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
@@ -167,7 +168,7 @@ export function ProfilePage() {
         <fieldset className="surface-card">
           <legend>Informations publiques</legend>
           <label>Nom de musicien<input value={musicianName} required placeholder="Votre nom ou nom de scène" onChange={(event) => setMusicianName(event.target.value)} /></label>
-          <label>Ville<input value={city} required placeholder="Strasbourg" onChange={(event) => setCity(event.target.value)} /></label>
+          <CityField value={city} onChange={setCity} />
           <label>Bio<textarea rows={4} value={bio} placeholder="Parlez de votre pratique musicale..." onChange={(event) => setBio(event.target.value)} /></label>
           <span className="field-label">Instruments et niveaux</span>
           <p className="form-hint">Un niveau est obligatoire pour chaque instrument sélectionné.</p>
@@ -185,7 +186,11 @@ export function ProfilePage() {
             <div className="group-heading"><h3>{group.name || `Groupe ${index + 1}`}</h3><button className="remove-group" type="button" onClick={() => setGroups((current) => current.filter((_, groupIndex) => groupIndex !== index))}>Supprimer</button></div>
             <label>Nom du groupe<input value={group.name} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, name: event.target.value } : item))} /></label>
             <div className="form-two-columns">
-              <label>Ville<input value={group.city} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, city: event.target.value } : item))} /></label>
+              <CityField
+                value={group.city}
+                onChange={(value) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, city: value } : item))}
+                id={`group-city-${index}`}
+              />
               <label>Poste occupé<select value={group.position} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, position: event.target.value } : item))}>{instruments.map((instrument) => <option value={instrument} key={instrument}>{instrument}</option>)}</select></label>
             </div>
             <label>Statut<select value={group.status} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, status: event.target.value as GroupStatus } : item))}><option value="association">Association</option><option value="professionnel">Professionnel</option></select></label>
