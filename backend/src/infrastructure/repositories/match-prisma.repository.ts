@@ -42,4 +42,25 @@ export class MatchPrismaRepository implements MatchRepository {
       },
     }));
   }
+
+  async findByPositionId(positionId: string): Promise<MatchWithStatus[]> {
+  const records = await prisma.match.findMany({
+    where: { positionId },
+    orderBy: { scoreGlobal: 'desc' },
+  });
+
+  return records.map((record) => ({
+    musicianId: record.musicianId,
+    positionId: record.positionId,
+    scoreGlobal: record.scoreGlobal,
+    statut: record.statut,
+    sousScores: {
+      instrument: record.scoreInstrument,
+      style: record.scoreStyle,
+      zone: record.scoreZone,
+      disponibilite: record.scoreDisponibilite,
+      niveau: record.scoreNiveau,
+    },
+  }));
+}
 }

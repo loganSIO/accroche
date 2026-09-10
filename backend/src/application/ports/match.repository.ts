@@ -17,4 +17,9 @@ export interface MatchRepository {
   // Lecture des matchs déjà calculés pour un musicien, triés par score
   // décroissant — utilisé par le controller pour l'affichage.
   findByMusicianId(musicianId: string): Promise<MatchWithStatus[]>;
+
+  // Lecture des matchs déjà calculés pour un poste, triés par score
+  // décroissant — symétrique de findByMusicianId, utilisé côté groupe pour
+  // voir les musiciens compatibles avec un poste donné.
+  findByPositionId(positionId: string): Promise<MatchWithStatus[]>;
 }

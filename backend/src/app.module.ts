@@ -5,10 +5,11 @@ import { MusiciansController } from './presentation/controllers/musicians.contro
 import { RegisterAccountController } from './presentation/controllers/register-account.controller.js';
 import { GroupsController } from './presentation/controllers/groups.controller.js';
 import { MapController } from './presentation/controllers/map.controller.js';
+import { PositionsController } from './presentation/controllers/positions.controller.js';
 
 @Module({
   imports: [],
-  controllers: [AppController, MusiciansController, GroupsController, RegisterAccountController, MapController],
+  controllers: [AppController, MusiciansController, GroupsController, RegisterAccountController, MapController, PositionsController],
   providers: [AppService],
 })
 export class AppModule {}
