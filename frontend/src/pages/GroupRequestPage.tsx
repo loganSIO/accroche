@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AppRoute } from '../App';
+import type { PositionLevel, RegisterGroupInput } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -10,7 +11,7 @@ const levels = [
   { value: 'expert', label: 'Expert' },
 ];
 
-interface PositionDraft { instrument: string; level: string; }
+interface PositionDraft { instrument: string; niveau: PositionLevel; }
 
 export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
   const [name, setName] = useState('');
@@ -20,12 +21,20 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
   const [positions, setPositions] = useState<PositionDraft[]>([]);
   const [saved, setSaved] = useState(false);
 
-  const addPosition = () => setPositions((current) => [...current, { instrument: instruments[0], level: 'debutant' }]);
+  const addPosition = () => setPositions((current) => [...current, { instrument: instruments[0], niveau: 'debutant' }]);
   const updatePosition = (index: number, update: Partial<PositionDraft>) => setPositions((current) => current.map((position, positionIndex) => positionIndex === index ? { ...position, ...update } : position));
   const toggleStyle = (style: string) => setGroupStyles((current) => current.includes(style) ? current.filter((item) => item !== style) : [...current, style]);
 
   const save = () => {
-    const request = { name, city, description, styles: groupStyles, positions };
+    const group: RegisterGroupInput = {
+      name,
+      styles: groupStyles,
+      status: 'association',
+      description,
+      audioLinks: [],
+      requestedInstruments: positions,
+    };
+    const request = { ...group, city };
     localStorage.setItem('accroche.groupRequests', JSON.stringify([
       ...JSON.parse(localStorage.getItem('accroche.groupRequests') ?? '[]') as unknown[],
       request,
@@ -33,7 +42,7 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
     const profile = localStorage.getItem('accroche.profileDraft');
     if (profile) {
       const parsed = JSON.parse(profile) as { groups?: unknown[] };
-      localStorage.setItem('accroche.profileDraft', JSON.stringify({ ...parsed, groups: [...(parsed.groups ?? []), { name, status: 'association', description }] }));
+      localStorage.setItem('accroche.profileDraft', JSON.stringify({ ...parsed, groups: [...(parsed.groups ?? []), { name, city, position: positions[0]?.instrument ?? instruments[0], status: group.status, description }] }));
     }
     setSaved(true);
   };
@@ -58,7 +67,7 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
         <p className="form-hint">Ajoutez chaque instrument recherché et le niveau attendu.</p>
         {positions.map((position, index) => <div className="position-row" key={index}>
           <select aria-label={`Instrument recherché ${index + 1}`} value={position.instrument} onChange={(event) => updatePosition(index, { instrument: event.target.value })}>{instruments.map((instrument) => <option value={instrument} key={instrument}>{instrument}</option>)}</select>
-          <select aria-label={`Niveau attendu ${index + 1}`} value={position.level} onChange={(event) => updatePosition(index, { level: event.target.value })}>{levels.map((level) => <option value={level.value} key={level.value}>{level.label}</option>)}</select>
+          <select aria-label={`Niveau attendu ${index + 1}`} value={position.niveau} onChange={(event) => updatePosition(index, { niveau: event.target.value as PositionLevel })}>{levels.map((level) => <option value={level.value} key={level.value}>{level.label}</option>)}</select>
           <button className="remove-group" type="button" onClick={() => setPositions((current) => current.filter((_, positionIndex) => positionIndex !== index))}>Supprimer</button>
         </div>)}
         <button className="button button-secondary" type="button" onClick={addPosition}>+ Ajouter un poste</button>

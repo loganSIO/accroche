@@ -1,23 +1,43 @@
 import { request } from './client';
+
+export type PositionLevel = 'debutant' | 'intermediaire' | 'avance' | 'expert';
+export type GroupStatus = 'association' | 'professionnel';
+export type MemberStatus = 'amateur' | 'pro';
+export type MusicianObjective = 'join_group' | 'found_group';
+
+export interface RequestedInstrument {
+  instrument: string;
+  niveau: PositionLevel;
+}
+
+export interface RegisterGroupInput {
+  name: string;
+  styles: string[];
+  status: GroupStatus;
+  description?: string;
+  audioLinks: string[];
+  requestedInstruments: RequestedInstrument[];
+}
+
 export interface RegisterAccountInput {
   email: string;
   password: string;
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
   musician?: {
-    status: 'amateur' | 'pro';
-    instruments: { instrument: string; niveau: string }[];
+    status: MemberStatus;
+    instruments: RequestedInstrument[];
     styles: string[];
-    objective: string[];
-    availabilities: { jourSemaine: string; creneauxJournee: string }[];
+    objective: MusicianObjective[];
+    availabilities: { jourSemaine: string; creneauxJournee: 'matin' | 'apres-midi' | 'soir' }[];
     bio?: string;
   };
   groups: Array<{
     name: string;
     styles: string[];
-    status: 'association' | 'professionnel';
+    status: GroupStatus;
     description?: string;
     audioLinks: string[];
-    requestedInstruments: { instrument: string; niveau: string }[];
+    requestedInstruments: RequestedInstrument[];
   }>;
 }
 export const registerAccount = (input: RegisterAccountInput) =>

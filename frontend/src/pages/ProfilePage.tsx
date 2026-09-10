@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { GroupStatus, PositionLevel } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -9,11 +10,11 @@ const levels = [
   { value: 'expert', label: 'Expert' },
 ];
 
-interface GroupDraft {
+interface GroupMembershipDraft {
   name: string;
   city: string;
   position: string;
-  status: 'association' | 'professionnel';
+  status: GroupStatus;
   description: string;
 }
 
@@ -24,7 +25,7 @@ interface ProfileDraft {
   instrumentLevels: Record<string, string>;
   styles: string[];
   bio: string;
-  groups: GroupDraft[];
+  groups: GroupMembershipDraft[];
 }
 
 interface GroupRequest {
@@ -32,7 +33,9 @@ interface GroupRequest {
   city: string;
   description: string;
   styles: string[];
-  positions: Array<{ instrument: string; level: string }>;
+  audioLinks: string[];
+  status: GroupStatus;
+  requestedInstruments: Array<{ instrument: string; niveau: PositionLevel }>;
 }
 
 function readRequests(): GroupRequest[] {
@@ -40,13 +43,36 @@ function readRequests(): GroupRequest[] {
   if (!stored) return [];
   try {
     const requests = JSON.parse(stored) as unknown;
-    return Array.isArray(requests) ? requests as GroupRequest[] : [];
+    if (!Array.isArray(requests)) return [];
+    return requests
+      .filter((request): request is Record<string, unknown> => typeof request === 'object' && request !== null)
+      .map((request) => {
+        const legacyPositions = Array.isArray(request.positions) ? request.positions : [];
+        const currentPositions = Array.isArray(request.requestedInstruments) ? request.requestedInstruments : legacyPositions;
+        const requestedInstruments = currentPositions
+          .filter((position): position is Record<string, unknown> => typeof position === 'object' && position !== null)
+          .map((position) => ({
+            instrument: String(position.instrument ?? ''),
+            niveau: String(position.niveau ?? position.level ?? 'debutant') as PositionLevel,
+          }))
+          .filter((position) => position.instrument.length > 0);
+        return {
+          name: String(request.name ?? ''),
+          city: String(request.city ?? ''),
+          description: String(request.description ?? ''),
+          styles: Array.isArray(request.styles) ? request.styles.map(String) : [],
+          audioLinks: Array.isArray(request.audioLinks) ? request.audioLinks.map(String) : [],
+          status: request.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
+          requestedInstruments,
+        };
+      })
+      .filter((request) => request.name.length > 0);
   } catch {
     return [];
   }
 }
 
-function levelLabel(value: string) {
+function levelLabel(value: PositionLevel) {
   return ({ debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé', expert: 'Expert' } as Record<string, string>)[value] ?? value;
 }
 
@@ -54,7 +80,28 @@ function readDraft(): ProfileDraft | null {
   const stored = localStorage.getItem('accroche.profileDraft');
   if (!stored) return null;
   try {
-    return JSON.parse(stored) as ProfileDraft;
+    const draft = JSON.parse(stored) as Record<string, unknown>;
+    if (typeof draft !== 'object' || draft === null) return null;
+    const groups = Array.isArray(draft.groups) ? draft.groups
+      .filter((group): group is Record<string, unknown> => typeof group === 'object' && group !== null)
+      .map((group) => ({
+        name: String(group.name ?? ''),
+        city: String(group.city ?? ''),
+        position: String(group.position ?? instruments[0]),
+        status: group.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
+        description: String(group.description ?? ''),
+      })) : [];
+    return {
+      musicianName: String(draft.musicianName ?? ''),
+      city: String(draft.city ?? ''),
+      instruments: Array.isArray(draft.instruments) ? draft.instruments.map(String) : [],
+      instrumentLevels: typeof draft.instrumentLevels === 'object' && draft.instrumentLevels !== null
+        ? Object.fromEntries(Object.entries(draft.instrumentLevels).map(([key, value]) => [key, String(value)]))
+        : {},
+      styles: Array.isArray(draft.styles) ? draft.styles.map(String) : [],
+      bio: String(draft.bio ?? ''),
+      groups,
+    };
   } catch {
     return null;
   }
@@ -69,7 +116,7 @@ export function ProfilePage() {
   const [instrumentLevels, setInstrumentLevels] = useState<Record<string, string>>(draft?.instrumentLevels ?? {});
   const [selectedStyles, setSelectedStyles] = useState<string[]>(draft?.styles ?? []);
   const [bio, setBio] = useState(draft?.bio ?? '');
-  const [groups, setGroups] = useState<GroupDraft[]>(draft?.groups ?? []);
+  const [groups, setGroups] = useState<GroupMembershipDraft[]>(draft?.groups ?? []);
   const [saved, setSaved] = useState(false);
 
   const addGroup = () => setGroups((current) => [...current, {
@@ -141,7 +188,7 @@ export function ProfilePage() {
               <label>Ville<input value={group.city} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, city: event.target.value } : item))} /></label>
               <label>Poste occupé<select value={group.position} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, position: event.target.value } : item))}>{instruments.map((instrument) => <option value={instrument} key={instrument}>{instrument}</option>)}</select></label>
             </div>
-            <label>Statut<select value={group.status} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, status: event.target.value as GroupDraft['status'] } : item))}><option value="association">Association</option><option value="professionnel">Professionnel</option></select></label>
+            <label>Statut<select value={group.status} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, status: event.target.value as GroupStatus } : item))}><option value="association">Association</option><option value="professionnel">Professionnel</option></select></label>
             <label>Description<textarea rows={2} value={group.description} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, description: event.target.value } : item))} /></label>
             <p className="form-hint">{group.city || 'Ville à renseigner'} · {group.position} · {group.status === 'professionnel' ? 'Professionnel' : 'Association'}</p>
           </div>)}
@@ -157,7 +204,7 @@ export function ProfilePage() {
             <p>{request.description}</p>
             {request.styles.length > 0 && <div className="tag-list">{request.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div>}
             <h4>Postes recherchés</h4>
-            <ul>{request.positions.map((position) => <li key={`${position.instrument}-${position.level}`}>{position.instrument} — {levelLabel(position.level)}</li>)}</ul>
+            <ul>{request.requestedInstruments.map((position) => <li key={`${position.instrument}-${position.niveau}`}>{position.instrument} — {levelLabel(position.niveau)}</li>)}</ul>
           </article>)}
         </section>
       </form>
