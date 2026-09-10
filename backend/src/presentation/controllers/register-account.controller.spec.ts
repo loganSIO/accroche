@@ -114,4 +114,36 @@ describe('RegisterAccountController (intégration réelle avec Postgres)', () =>
   expect(user?.password).toBeDefined();
   expect(user?.password).not.toBe('secret-en-clair');
   });
+
+  it('déclenche le calcul de match pour le musicien créé si un poste compatible existe déjà', async () => {
+  const zone = await prisma.zone.create({
+    data: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+  });
+  const groupUser = await prisma.user.create({
+    data: { email: 'existing-group@example.com', password: 'hash', city: 'Strasbourg' },
+  });
+  const group = await prisma.groupProfile.create({
+    data: { userId: groupUser.id, zoneId: zone.id, name: 'Groupe existant', styles: ['rock'], status: 'ASSOCIATION' },
+  });
+  await prisma.openPosition.create({
+    data: { ownerType: 'GROUP', groupProfileId: group.id, instrumentRecherche: 'guitare', niveauAttendu: 'avance' },
+  });
+
+  const dto = buildDto({
+    email: 'nouveau-musicien@example.com',
+    groups: [],
+    musician: {
+      status: 'amateur',
+      instruments: [{ instrument: 'guitare', niveau: 'avance' }],
+      styles: ['Rock'],
+      objective: ['join_group'],
+      availabilities: [{ jourSemaine: 'samedi', creneauxJournee: 'soir' }],
+    },
+  });
+
+  await controller.register(dto);
+
+  const matches = await prisma.match.findMany();
+  expect(matches).toHaveLength(1);
+});
 });

@@ -2,9 +2,10 @@ import type {
   MusicianRepository,
   CreateMusicianInput,
 } from '../../application/ports/musician.repository.js';
-import type { MusicianCandidate } from '../../domain/entities/musician.entity.js';
+import type { MusicianCandidate, Zone } from '../../domain/entities/musician.entity.js';
 import { prisma } from '../prisma.client.js';
 import { toMusicianCandidate } from '../mappers/musician.mapper.js';
+import { distanceKm } from '../geo/distance.js';
 
 export class MusicianPrismaRepository implements MusicianRepository {
   async findById(id: string): Promise<MusicianCandidate | null> {
@@ -23,6 +24,21 @@ export class MusicianPrismaRepository implements MusicianRepository {
     }
 
     return toMusicianCandidate(record);
+  }
+
+  async findNearZone(zone: Zone): Promise<MusicianCandidate[]> {
+    const records = await prisma.musicianProfile.findMany({
+      include: {
+        instruments: true,
+        styles: true,
+        availabilities: true,
+        zone: true,
+      },
+    });
+
+    return records
+      .map(toMusicianCandidate)
+      .filter((musician) => distanceKm(zone, musician.zone) <= zone.rayonKm);
   }
 
   async create(input: CreateMusicianInput): Promise<MusicianCandidate> {

@@ -1,17 +1,28 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
 import { GroupPrismaRepository } from '../../infrastructure/repositories/group-prisma.repository.js';
 import { OpenPositionPrismaRepository } from '../../infrastructure/repositories/open-position-prisma.repository.js';
+import { MusicianPrismaRepository } from '../../infrastructure/repositories/musician-prisma.repository.js';
+import { MatchPrismaRepository } from '../../infrastructure/repositories/match-prisma.repository.js';
 import { CreateOpenPositionForGroup, GroupNotFoundError } from '../../application/use-cases/open-position-for-group.js';
+import { RecalculateMatchesForMusician } from '../../application/use-cases/recalculate-matches-for-musician.js';
+import { RecalculateMatchesForNewPosition } from '../../application/use-cases/recalculate-matches-for-new-position.js';
 import { CreateOpenPositionDto } from '../dtos/create-open-position.dto.js';
 
-// Couche Présentation : lecture simple, aucune règle métier à orchestrer,
-// donc appel direct au repository — même convention que MusiciansController.
 @Controller('api/v1/groups')
 export class GroupsController {
   private readonly groupRepository = new GroupPrismaRepository();
   private readonly createOpenPositionForGroup = new CreateOpenPositionForGroup(
     new OpenPositionPrismaRepository(),
     new GroupPrismaRepository(),
+  );
+  private readonly recalculateMatchesForMusician = new RecalculateMatchesForMusician(
+    new MusicianPrismaRepository(),
+    new OpenPositionPrismaRepository(),
+    new MatchPrismaRepository(),
+  );
+  private readonly recalculateMatchesForNewPosition = new RecalculateMatchesForNewPosition(
+    new MusicianPrismaRepository(),
+    this.recalculateMatchesForMusician,
   );
 
   @Get(':id')
@@ -34,6 +45,9 @@ export class GroupsController {
         instrumentRecherche: dto.instrument,
         niveauAttendu: dto.niveau as 'debutant' | 'intermediaire' | 'avance' | 'expert',
       });
+
+      await this.recalculateMatchesForNewPosition.execute(position);
+
       return {
         data: position,
         meta: { timestamp: new Date().toISOString(), version: 'v1' },

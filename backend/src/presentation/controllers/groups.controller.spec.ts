@@ -84,4 +84,34 @@ describe('GroupsController.createPosition (intégration réelle avec Postgres)',
       controller.createPosition('id-inexistant', { instrument: 'basse', niveau: 'intermediaire' }),
     ).rejects.toThrow('Groupe id-inexistant introuvable.');
   });
+
+  it('déclenche le calcul de match pour un musicien déjà compatible dans la zone', async () => {
+  const zone = await prisma.zone.create({
+    data: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+  });
+  const musicianUser = await prisma.user.create({
+    data: { email: 'm3@example.com', password: 'hash', city: 'Strasbourg' },
+  });
+  await prisma.musicianProfile.create({
+    data: {
+      userId: musicianUser.id,
+      zoneId: zone.id,
+      status: 'AMATEUR',
+      objective: [],
+      instruments: { create: [{ instrument: 'basse', niveau: 'intermediaire' }] },
+    },
+  });
+
+  const groupUser = await prisma.user.create({
+    data: { email: 'g3@example.com', password: 'hash', city: 'Strasbourg' },
+  });
+  const group = await prisma.groupProfile.create({
+    data: { userId: groupUser.id, zoneId: zone.id, name: 'Les Accords', styles: ['rock'], status: 'ASSOCIATION' },
+  });
+
+  await controller.createPosition(group.id, { instrument: 'basse', niveau: 'intermediaire' });
+
+  const matches = await prisma.match.findMany();
+  expect(matches).toHaveLength(1);
+});
 });
