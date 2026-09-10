@@ -1,13 +1,14 @@
-import type { GroupStatus, MemberStatus, User, Zone } from './user';
+import type { GroupStatus, MemberStatus, Zone } from './user';
+import type { PositionLevel } from '../api/users';
 
-export interface Instrument { instrument: string; niveau: string; }
-export interface Availability { jourSemaine: string; creneauxJournee: string; }
+export interface Instrument { instrument: string; niveau: PositionLevel; }
+export interface Availability { jourSemaine: string; creneauxJournee: 'matin' | 'apres-midi' | 'soir'; }
 export interface MusicianProfile {
-  id: string; user: User; zone: Zone; status: MemberStatus; objective: string[];
-  bio?: string; instruments: Instrument[]; styles: string[]; availabilities: Availability[];
+  id: string; zone: Zone; status: MemberStatus;
+  instruments: Instrument[]; styles: string[]; availabilities: Availability[];
 }
 export interface GroupProfile {
-  id: string; user: User; zone: Zone; name: string; styles: string[];
+  id: string; zone: Zone; name: string; styles: string[];
   status: GroupStatus; description?: string; audioLinks: string[];
 }
 export interface FoundingProfile {
