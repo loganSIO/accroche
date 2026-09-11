@@ -22,6 +22,8 @@ Le frontend peut déjà utiliser les routes suivantes :
 | Lecture d'un groupe | `GET /api/v1/groups/:id` |
 | Création d'un poste pour un groupe existant | `POST /api/v1/groups/:groupId/positions` |
 | Lecture des clusters de la carte | `GET /api/v1/map` |
+| Lecture des matchs d'un poste | `GET /api/v1/positions/:id/matches` |
+| Connexion (authentification) | `POST /api/v1/auth/login` |
 
 Les payloads frontend associés doivent continuer à respecter les DTO backend,
 notamment :
@@ -51,12 +53,17 @@ afin de ne pas bloquer la visualisation de l'application.
 Le formulaire de connexion vérifie actuellement ces comptes locaux et ne
 contacte pas le backend.
 
+La route `POST /api/v1/auth/login` existe désormais côté backend
+(`backend/src/presentation/controllers/auth.controller.ts`, JWT). Reste à
+brancher côté frontend : remplacer `authenticateLocalAccount` par l'appel
+réel à cette route (cf. étapes ci-dessous). Le refresh, le logout et
+`/users/me` restent à créer côté backend.
+
 ### À intégrer dans le backend
 
-Créer une authentification réelle, par exemple :
+Compléter l'authentification déjà démarrée avec :
 
 ```text
-POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
 GET  /api/v1/users/me

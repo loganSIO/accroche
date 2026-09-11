@@ -6,7 +6,7 @@ J’ai pris connaissance des documents suivants :
 - [README.md](../README.md)
 - [docs/modele-donnees-MVP.md](./modele-donnees-MVP.md)
 - [docs/architecture-couches-MVP.md](./architecture-couches-MVP.md)
-- [docs/plan-frontend-simon.md](./plan-frontend-simon.md)
+- [docs/archive/plan-frontend-simon-claude.md](./archive/plan-frontend-simon-claude.md)
 
 Le backend est encore en construction, mais le frontend doit commencer en s’appuyant sur les routes déjà écrites et en évitant toute modification du backend sauf si c’est absolument nécessaire.
 
@@ -50,7 +50,7 @@ Les règles à respecter côté frontend :
 
 ### 3. Pas de complexité inutile
 
-Le document [docs/plan-frontend-simon.md](./plan-frontend-simon.md) a déjà tranché plusieurs points :
+Le document [docs/archive/plan-frontend-simon-claude.md](./archive/plan-frontend-simon-claude.md) a déjà tranché plusieurs points :
 - React + Vite, pas Next.js
 - TypeScript
 - pas de gestion d’état globale prématurée
@@ -93,7 +93,7 @@ Les éléments qui structurent ce plan sont :
 - [README.md](../README.md) : vue d’ensemble du produit, stack et API
 - [docs/modele-donnees-MVP.md](./modele-donnees-MVP.md) : schéma de données métier
 - [docs/architecture-couches-MVP.md](./architecture-couches-MVP.md) : architecture de l’application
-- [docs/plan-frontend-simon.md](./plan-frontend-simon.md) : plan d’initialisation frontend recommandé
+- [docs/archive/plan-frontend-simon-claude.md](./archive/plan-frontend-simon-claude.md) : plan d’initialisation frontend recommandé
 
 ## Structure du frontend à adopter
 
@@ -335,7 +335,7 @@ Valider que le frontend fonctionne avec les routes backend déjà écrites ou pr
 - les erreurs de CORS peuvent apparaître si le backend n’autorise pas les appels depuis le frontend
 - si une erreur CORS se produit, il faut signaler précisément qu’il s’agit d’un point backend et non d’un bug frontend
 
-Le document [docs/plan-frontend-simon.md](./plan-frontend-simon.md) le précise déjà : le backend peut nécessiter `app.enableCors()` dans `main.ts` pour accepter les requêtes du frontend sur un autre port.
+Le document [docs/archive/plan-frontend-simon-claude.md](./archive/plan-frontend-simon-claude.md) le précise déjà : le backend peut nécessiter `app.enableCors()` dans `main.ts` pour accepter les requêtes du frontend sur un autre port.
 
 ## Ce qu’on consomme côté backend sans le modifier
 
@@ -369,7 +369,7 @@ Pour rester fidèle au MVP et éviter les erreurs de conception :
 - éventuellement `react-router-dom` si la navigation entre pages le justifie
 - pas de dépendance supplémentaire tant que l’app n’a pas besoin d’une vraie fonctionnalité demandée par l’UX
 
-Cette ligne directrice est cohérente avec le document [docs/plan-frontend-simon.md](./plan-frontend-simon.md) et le besoin de garder le projet simple et lisible.
+Cette ligne directrice est cohérente avec le document [docs/archive/plan-frontend-simon-claude.md](./archive/plan-frontend-simon-claude.md) et le besoin de garder le projet simple et lisible.
 
 ## Ordre de mise en œuvre recommandé
 
