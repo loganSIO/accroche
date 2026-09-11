@@ -13,6 +13,8 @@ export interface OpenPositionRepository {
   // (SQL/PostGIS côté infrastructure) ; ce port ne l'impose pas.
   findOpenPositionsNearZone(zone: Zone): Promise<OpenPositionCandidate[]>;
 
+  
+
   // Créé un poste rattaché à un groupe existant. ownerType = GROUP est
   // garanti par construction ici : cette méthode ne peut pas créer de
   // poste rattaché à un FoundingProfile. Cf. décision produit : une
