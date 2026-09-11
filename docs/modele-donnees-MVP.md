@@ -35,10 +35,12 @@ Rattaché à un `User` (le créateur/admin du groupe).
 
 ### `OpenPosition`
 Un poste recherché, rattaché à un `GroupProfile` **ou** à un `FoundingProfile`. C'est cette entité qui est réellement comparée à un `MusicianProfile`, pas le groupe dans son ensemble.
-- `id`, `owner_type` (`group` | `founding`), `owner_id`
+- `id`, `owner_type` (`group` | `founding`)
 - `instrument_recherche`, `niveau_attendu`, `statut` (`ouvert` | `pourvu` | `annulé`)
 
 *Pourquoi séparer `OpenPosition` du profil parent* : un groupe a souvent plusieurs postes ouverts avec des critères différents. Sans cette séparation, il faudrait dupliquer des `GroupProfile` ou stocker des critères multiples dans un seul objet — les deux mènent à une refonte quand le besoin de plusieurs postes simultanés se confirme (et il se confirmera).
+
+*Implémentation réelle du owner polymorphe* : le schéma (`backend/prisma/schema.prisma`) ne modélise pas un `owner_id` générique unique comme décrit ci-dessus, mais deux clés étrangères nullables séparées, `groupProfileId` et `foundingProfileId`, en plus du champ `ownerType`. Raison : Prisma n'a pas de support natif pour les relations polymorphes (un FK unique pointant vers l'une ou l'autre table selon `owner_type`) — la solution usuelle avec cet ORM est une paire de FK optionnelles plutôt qu'une relation polymorphe simulée. **Point de vigilance non résolu** : le XOR entre `groupProfileId` et `foundingProfileId` (un poste appartient à l'un des deux, jamais les deux, jamais aucun) n'est pas garanti au niveau base de données — à vérifier explicitement dans chaque use case qui crée ou modifie un `OpenPosition`.
 
 ### `FoundingProfile` (la version light de "monter un groupe")
 Rattaché à un `MusicianProfile` fondateur. Structurellement proche de `GroupProfile` mais distinct sémantiquement : ce n'est pas encore un groupe constitué.

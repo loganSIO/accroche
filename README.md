@@ -71,9 +71,14 @@ REST, versionnée (`/api/v1/...`), enveloppe de réponse cohérente partout :
 Erreurs au format `{ "error": { "code": "...", "message": "..." } }`.
 
 Endpoints déjà fonctionnels :
-- `POST /api/v1/musicians`
-- `POST /api/v1/groups`
+- `POST /api/v1/accounts`
+- `GET /api/v1/musicians/:id`
 - `GET /api/v1/musicians/:id/matches`
+- `GET /api/v1/groups/:id`
+- `POST /api/v1/groups/:groupId/positions`
+- `GET /api/v1/positions/:id/matches`
+- `GET /api/v1/map`
+- `POST /api/v1/auth/login`
 
 Contrat complet (endpoints prévus, y compris non encore implémentés) : `docs/contrat-API-MVP.md`.
 
@@ -112,14 +117,13 @@ git push -u origin feature/nom-de-la-tache
 
 ## État actuel et backlog
 
-Voir `docs/plan-action-backend.md` (backend) et `docs/plan-frontend-simon.md` (frontend) pour l'état précis, ce qui est fait, testé, et les tâches restantes avec leurs dépendances.
+Voir `docs/fonctionnalites-locales-a-integrer-backend.md` (backend, routes encore à créer pour remplacer les simulations `localStorage` du frontend) et `docs/frontend-etat-avancement.md` (frontend, avancement réel par phase) pour l'état précis, ce qui est fait, testé, et les tâches restantes.
 
 ## Décisions volontairement reportées (pas des oublis)
 
 - Volet intermittence (compteur d'heures/cachets) — v2, complexité réglementaire à traiter à part
 - Notifications temps réel — le mécanisme de recalcul déclenché existe déjà pour ça, rien de branché
 - Vérification du statut pro/amateur — déclaratif pour l'instant, assumé
-- Hashage des mots de passe — **à faire avant tout déploiement réel**, pas fait dans le code actuel
 - Librairie de carte, gestion d'état frontend — à trancher ensemble, pas unilatéralement
 
 ## Routes de gestion de compte — contrat
