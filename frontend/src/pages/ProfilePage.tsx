@@ -4,6 +4,8 @@ import type { GroupStatus, PositionLevel } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
+const MAX_BIO_LENGTH = 500;
+const MAX_GROUP_DESCRIPTION_LENGTH = 500;
 const levels = [
   { value: 'debutant', label: 'Débutant' },
   { value: 'intermediaire', label: 'Intermédiaire' },
@@ -60,7 +62,7 @@ function readRequests(): GroupRequest[] {
         return {
           name: String(request.name ?? ''),
           city: String(request.city ?? ''),
-          description: String(request.description ?? ''),
+          description: String(request.description ?? '').slice(0, MAX_GROUP_DESCRIPTION_LENGTH),
           styles: Array.isArray(request.styles) ? request.styles.map(String) : [],
           audioLinks: Array.isArray(request.audioLinks) ? request.audioLinks.map(String) : [],
           status: request.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
@@ -90,7 +92,7 @@ function readDraft(): ProfileDraft | null {
         city: String(group.city ?? ''),
         position: String(group.position ?? instruments[0]),
         status: group.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
-        description: String(group.description ?? ''),
+        description: String(group.description ?? '').slice(0, MAX_GROUP_DESCRIPTION_LENGTH),
       })) : [];
     return {
       musicianName: String(draft.musicianName ?? ''),
@@ -100,7 +102,7 @@ function readDraft(): ProfileDraft | null {
         ? Object.fromEntries(Object.entries(draft.instrumentLevels).map(([key, value]) => [key, String(value)]))
         : {},
       styles: Array.isArray(draft.styles) ? draft.styles.map(String) : [],
-      bio: String(draft.bio ?? ''),
+      bio: String(draft.bio ?? '').slice(0, MAX_BIO_LENGTH),
       groups,
     };
   } catch {
@@ -169,7 +171,17 @@ export function ProfilePage() {
           <legend>Informations publiques</legend>
           <label>Nom de musicien<input value={musicianName} required placeholder="Votre nom ou nom de scène" onChange={(event) => setMusicianName(event.target.value)} /></label>
           <CityField value={city} onChange={setCity} />
-          <label>Bio<textarea rows={4} value={bio} placeholder="Parlez de votre pratique musicale..." onChange={(event) => setBio(event.target.value)} /></label>
+          <label>
+            Bio
+            <textarea
+              rows={4}
+              value={bio}
+              maxLength={MAX_BIO_LENGTH}
+              placeholder="Parlez de votre pratique musicale..."
+              onChange={(event) => setBio(event.target.value)}
+            />
+            <span className="character-counter">{bio.length}/{MAX_BIO_LENGTH} caractères</span>
+          </label>
           <span className="field-label">Instruments et niveaux</span>
           <p className="form-hint">Un niveau est obligatoire pour chaque instrument sélectionné.</p>
           <div className="instrument-list">{instruments.map((instrument) => <div className="instrument-row" key={instrument}>
@@ -194,7 +206,16 @@ export function ProfilePage() {
               <label>Poste occupé<select value={group.position} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, position: event.target.value } : item))}>{instruments.map((instrument) => <option value={instrument} key={instrument}>{instrument}</option>)}</select></label>
             </div>
             <label>Statut<select value={group.status} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, status: event.target.value as GroupStatus } : item))}><option value="association">Association</option><option value="professionnel">Professionnel</option></select></label>
-            <label>Description<textarea rows={2} value={group.description} onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, description: event.target.value } : item))} /></label>
+            <label>
+              Description
+              <textarea
+                rows={2}
+                value={group.description}
+                maxLength={MAX_GROUP_DESCRIPTION_LENGTH}
+                onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, description: event.target.value } : item))}
+              />
+              <span className="character-counter">{group.description.length}/{MAX_GROUP_DESCRIPTION_LENGTH} caractères</span>
+            </label>
             <p className="form-hint">{group.city || 'Ville à renseigner'} · {group.position} · {group.status === 'professionnel' ? 'Professionnel' : 'Association'}</p>
           </div>)}
           <button className="button button-secondary" type="button" onClick={addGroup}>+ Ajouter un groupe</button>
@@ -217,7 +238,7 @@ export function ProfilePage() {
         <span className="eyebrow">Aperçu public</span>
         <h2>{musicianName || 'Votre nom de musicien'}</h2>
         <p className="profile-location">{city || 'Ville à renseigner'}</p>
-        <p>{bio || 'Votre présentation apparaîtra ici.'}</p>
+        <p className="profile-bio">{bio || 'Votre présentation apparaîtra ici.'}</p>
         <h3>Instruments</h3>
         {selectedInstruments.length ? <ul>{selectedInstruments.map((instrument) => <li key={instrument}>{instrument} — {levels.find((level) => level.value === instrumentLevels[instrument])?.label}</li>)}</ul> : <p className="form-hint">Aucun instrument renseigné.</p>}
         <h3>Styles</h3>

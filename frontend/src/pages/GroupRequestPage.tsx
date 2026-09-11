@@ -5,6 +5,7 @@ import type { PositionLevel, RegisterGroupInput } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
+const MAX_GROUP_DESCRIPTION_LENGTH = 500;
 const levels = [
   { value: 'debutant', label: 'Débutant' },
   { value: 'intermediaire', label: 'Intermédiaire' },
@@ -59,7 +60,18 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
         <legend>Le groupe</legend>
         <label>Nom du groupe<input required value={name} onChange={(event) => setName(event.target.value)} /></label>
         <CityField value={city} onChange={setCity} id="group-french-cities" />
-        <label>Description<textarea required rows={4} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Présentez votre projet musical..." /></label>
+        <label>
+          Description
+          <textarea
+            required
+            rows={4}
+            value={description}
+            maxLength={MAX_GROUP_DESCRIPTION_LENGTH}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Présentez votre projet musical..."
+          />
+          <span className="character-counter">{description.length}/{MAX_GROUP_DESCRIPTION_LENGTH} caractères</span>
+        </label>
         <span className="field-label">Styles musicaux</span>
         <div className="choice-grid">{styles.map((style) => <label className="choice" key={style}><input type="checkbox" checked={groupStyles.includes(style)} onChange={() => toggleStyle(style)} />{style}</label>)}</div>
       </fieldset>
