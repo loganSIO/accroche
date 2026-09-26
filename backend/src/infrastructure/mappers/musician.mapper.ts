@@ -19,6 +19,7 @@ type MusicianProfileWithRelations = MusicianProfile & {
 export function toMusicianCandidate(record: MusicianProfileWithRelations): MusicianCandidate {
   return {
     id: record.id,
+    musicianName: record.musicianName,
     instruments: record.instruments.map((i) => ({
       instrument: i.instrument,
       niveau: i.niveau as NiveauMusicien,
@@ -35,5 +36,7 @@ export function toMusicianCandidate(record: MusicianProfileWithRelations): Music
       creneauxJournee: a.creneauxJournee as 'matin' | 'apres-midi' | 'soir',
     })),
     status: record.status.toLowerCase() as 'amateur' | 'pro',
+    objective: record.objective,
+    bio: record.bio ?? undefined,
   };
 }

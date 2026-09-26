@@ -24,9 +24,12 @@ export interface Zone {
 
 export interface MusicianCandidate {
   id: string;
+  musicianName: string;
   instruments: MusicianInstrument[];
   styles: string[];
   zone: Zone;
   availabilities: Availability[];
   status: MemberStatus;
+  objective?: string[];
+  bio?: string;
 }

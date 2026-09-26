@@ -3,6 +3,66 @@ import { prisma } from '../prisma.client.js';
 import { toGroupCandidate } from '../mappers/group.mapper.js';
 
 export class GroupPrismaRepository implements GroupRepository {
+  async findByUserId(userId: string): Promise<GroupCandidate[]> {
+    const records = await prisma.groupProfile.findMany({
+      where: { userId },
+      include: { zone: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    return records.map(toGroupCandidate);
+  }
+
+  async createForUser(userId: string, input: Omit<CreateGroupInput, 'email' | 'password' | 'city'>): Promise<GroupCandidate> {
+    const record = await prisma.$transaction(async (tx) => {
+      const zone = await tx.zone.create({ data: input.zone });
+      return tx.groupProfile.create({
+        data: {
+          userId,
+          zoneId: zone.id,
+          name: input.name,
+          styles: input.styles,
+          status: input.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL',
+          description: input.description,
+          audioLinks: input.audioLinks,
+        },
+        include: { zone: true },
+      });
+    });
+    return toGroupCandidate(record);
+  }
+
+  async updateForUser(
+    groupId: string,
+    userId: string,
+    input: Partial<Omit<CreateGroupInput, 'email' | 'password' | 'city'>>,
+  ): Promise<GroupCandidate | null> {
+    const existing = await prisma.groupProfile.findFirst({ where: { id: groupId, userId } });
+    if (!existing) return null;
+
+    const record = await prisma.$transaction(async (tx) => {
+      if (input.zone) {
+        await tx.zone.update({ where: { id: existing.zoneId }, data: input.zone });
+      }
+      return tx.groupProfile.update({
+        where: { id: groupId },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.styles !== undefined ? { styles: input.styles } : {}),
+          ...(input.status !== undefined ? { status: input.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL' } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.audioLinks !== undefined ? { audioLinks: input.audioLinks } : {}),
+        },
+        include: { zone: true },
+      });
+    });
+    return toGroupCandidate(record);
+  }
+
+  async deleteForUser(groupId: string, userId: string): Promise<boolean> {
+    const result = await prisma.groupProfile.deleteMany({ where: { id: groupId, userId } });
+    return result.count === 1;
+  }
+
   async findById(id: string): Promise<GroupCandidate | null> {
     const record = await prisma.groupProfile.findUnique({
       where: { id },

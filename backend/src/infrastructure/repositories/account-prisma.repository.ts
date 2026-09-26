@@ -24,6 +24,7 @@ export class AccountPrismaRepository {
           data: {
             userId: user.id,
             zoneId: musicianZone!.id,
+            musicianName: input.musician.musicianName ?? '',
             status: input.musician.status.toUpperCase() as 'AMATEUR' | 'PRO',
             objective: input.musician.objective,
             bio: input.musician.bio,

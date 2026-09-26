@@ -9,4 +9,5 @@ export interface UserRepository {
   // du mot de passe inclus (jamais exposé au-delà de la couche application
   // qui fait la comparaison).
   findByEmail(email: string): Promise<AuthenticatedUser | null>;
+  findById(id: string): Promise<Omit<AuthenticatedUser, 'passwordHash'> | null>;
 }

@@ -6,7 +6,7 @@ import type { PasswordHasher } from '../ports/password-hasher.js';
 describe('Login', () => {
   it('retourne le userId si les identifiants sont valides', async () => {
     const user: AuthenticatedUser = { id: 'user-1', email: 'test@example.com', passwordHash: 'hash-stocke' };
-    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(user) };
+    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(user), findById: vi.fn() };
     const passwordHasher: PasswordHasher = {
       hash: vi.fn(),
       compare: vi.fn().mockResolvedValue(true),
@@ -21,7 +21,7 @@ describe('Login', () => {
   });
 
   it("lève InvalidCredentialsError si l'email n'existe pas", async () => {
-    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(null) };
+    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(null), findById: vi.fn() };
     const passwordHasher: PasswordHasher = { hash: vi.fn(), compare: vi.fn() };
 
     const login = new Login(userRepository, passwordHasher);
@@ -32,7 +32,7 @@ describe('Login', () => {
 
   it('lève InvalidCredentialsError si le mot de passe est incorrect', async () => {
     const user: AuthenticatedUser = { id: 'user-1', email: 'test@example.com', passwordHash: 'hash-stocke' };
-    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(user) };
+    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(user), findById: vi.fn() };
     const passwordHasher: PasswordHasher = { hash: vi.fn(), compare: vi.fn().mockResolvedValue(false) };
 
     const login = new Login(userRepository, passwordHasher);
@@ -41,7 +41,7 @@ describe('Login', () => {
   });
 
   it('lève le même message pour email inconnu et mot de passe incorrect (anti-énumération)', async () => {
-    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(null) };
+    const userRepository: UserRepository = { findByEmail: vi.fn().mockResolvedValue(null), findById: vi.fn() };
     const passwordHasher: PasswordHasher = { hash: vi.fn(), compare: vi.fn() };
     const login = new Login(userRepository, passwordHasher);
 
