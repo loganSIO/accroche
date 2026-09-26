@@ -1,7 +1,8 @@
 import { LoginForm } from '../profile/LoginForm';
 import { RegisterForm } from '../profile/RegisterForm';
+import type { AuthSession } from '../../api/client';
 
-interface AuthModalProps { mode: 'login' | 'register'; onClose: () => void; onModeChange: (mode: 'login' | 'register') => void; onAuthenticated: (userId: string) => void; }
+interface AuthModalProps { mode: 'login' | 'register'; onClose: () => void; onModeChange: (mode: 'login' | 'register') => void; onAuthenticated: (session: AuthSession) => void; }
 export function AuthModal({ mode, onClose, onModeChange, onAuthenticated }: AuthModalProps) {
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">

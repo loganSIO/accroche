@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { registerAccount, type RegisterAccountInput } from '../../api/users';
-import { createLocalAccount, saveLocalAccount } from '../../api/localAuth';
-import { ApiError } from '../../api/client';
+import { login } from '../../api/auth';
+import type { AuthSession } from '../../api/client';
 
-export function RegisterForm({ onSuccess }: { onSuccess: (userId: string) => void }) {
+export function RegisterForm({ onSuccess }: { onSuccess: (session: AuthSession) => void }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -23,21 +23,14 @@ export function RegisterForm({ onSuccess }: { onSuccess: (userId: string) => voi
     const email = String(form.get('email'));
     const password = String(form.get('password'));
     try {
-      const result = await registerAccount(input);
-      saveLocalAccount({ userId: result.userId, email, password });
+      await registerAccount(input);
+      const session = await login(email, password);
       setStatus('success');
       setMessage('Compte créé. Vous êtes maintenant connecté.');
-      setTimeout(() => onSuccess(result.userId), 700);
+      setTimeout(() => onSuccess(session), 700);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 400) {
-        const userId = createLocalAccount(email, password);
-        setStatus('success');
-        setMessage('Compte créé en mode local. Vous êtes maintenant connecté.');
-        setTimeout(() => onSuccess(userId), 700);
-      } else {
-        setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'Impossible de créer le compte.');
-      }
+      setStatus('error');
+      setMessage(error instanceof Error ? error.message : 'Impossible de créer le compte.');
     }
   };
 

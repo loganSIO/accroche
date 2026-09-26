@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CityField } from '../components/profile/CityField';
-import type { GroupStatus, PositionLevel } from '../api/users';
+import { ApiError } from '../api/client';
+import { createMusicianProfile, getMusicianProfile, updateMusicianProfile, type GroupStatus, type MusicianObjective, type PositionLevel } from '../api/users';
+import { createUserGroup, deleteUserGroup, listUserGroups, updateUserGroup } from '../api/groups';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -14,6 +16,7 @@ const levels = [
 ];
 
 interface GroupMembershipDraft {
+  id?: string;
   name: string;
   city: string;
   position: string;
@@ -21,106 +24,44 @@ interface GroupMembershipDraft {
   description: string;
 }
 
-interface ProfileDraft {
-  musicianName: string;
-  city: string;
-  instruments: string[];
-  instrumentLevels: Record<string, string>;
-  styles: string[];
-  bio: string;
-  groups: GroupMembershipDraft[];
-}
-
-interface GroupRequest {
-  name: string;
-  city: string;
-  description: string;
-  styles: string[];
-  audioLinks: string[];
-  status: GroupStatus;
-  requestedInstruments: Array<{ instrument: string; niveau: PositionLevel }>;
-}
-
-function readRequests(): GroupRequest[] {
-  const stored = localStorage.getItem('accroche.groupRequests');
-  if (!stored) return [];
-  try {
-    const requests = JSON.parse(stored) as unknown;
-    if (!Array.isArray(requests)) return [];
-    return requests
-      .filter((request): request is Record<string, unknown> => typeof request === 'object' && request !== null)
-      .map((request) => {
-        const legacyPositions = Array.isArray(request.positions) ? request.positions : [];
-        const currentPositions = Array.isArray(request.requestedInstruments) ? request.requestedInstruments : legacyPositions;
-        const requestedInstruments = currentPositions
-          .filter((position): position is Record<string, unknown> => typeof position === 'object' && position !== null)
-          .map((position) => ({
-            instrument: String(position.instrument ?? ''),
-            niveau: String(position.niveau ?? position.level ?? 'debutant') as PositionLevel,
-          }))
-          .filter((position) => position.instrument.length > 0);
-        return {
-          name: String(request.name ?? ''),
-          city: String(request.city ?? ''),
-          description: String(request.description ?? '').slice(0, MAX_GROUP_DESCRIPTION_LENGTH),
-          styles: Array.isArray(request.styles) ? request.styles.map(String) : [],
-          audioLinks: Array.isArray(request.audioLinks) ? request.audioLinks.map(String) : [],
-          status: request.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
-          requestedInstruments,
-        };
-      })
-      .filter((request) => request.name.length > 0);
-  } catch {
-    return [];
-  }
-}
-
-function levelLabel(value: PositionLevel) {
-  return ({ debutant: 'Débutant', intermediaire: 'Intermédiaire', avance: 'Avancé', expert: 'Expert' } as Record<string, string>)[value] ?? value;
-}
-
-function readDraft(): ProfileDraft | null {
-  const stored = localStorage.getItem('accroche.profileDraft');
-  if (!stored) return null;
-  try {
-    const draft = JSON.parse(stored) as Record<string, unknown>;
-    if (typeof draft !== 'object' || draft === null) return null;
-    const groups = Array.isArray(draft.groups) ? draft.groups
-      .filter((group): group is Record<string, unknown> => typeof group === 'object' && group !== null)
-      .map((group) => ({
-        name: String(group.name ?? ''),
-        city: String(group.city ?? ''),
-        position: String(group.position ?? instruments[0]),
-        status: group.status === 'professionnel' ? 'professionnel' as const : 'association' as const,
-        description: String(group.description ?? '').slice(0, MAX_GROUP_DESCRIPTION_LENGTH),
-      })) : [];
-    return {
-      musicianName: String(draft.musicianName ?? ''),
-      city: String(draft.city ?? ''),
-      instruments: Array.isArray(draft.instruments) ? draft.instruments.map(String) : [],
-      instrumentLevels: typeof draft.instrumentLevels === 'object' && draft.instrumentLevels !== null
-        ? Object.fromEntries(Object.entries(draft.instrumentLevels).map(([key, value]) => [key, String(value)]))
-        : {},
-      styles: Array.isArray(draft.styles) ? draft.styles.map(String) : [],
-      bio: String(draft.bio ?? '').slice(0, MAX_BIO_LENGTH),
-      groups,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function ProfilePage() {
-  const draft = readDraft();
-  const requests = readRequests();
-  const [musicianName, setMusicianName] = useState(draft?.musicianName ?? '');
-  const [city, setCity] = useState(draft?.city ?? '');
-  const [selectedInstruments, setSelectedInstruments] = useState<string[]>(draft?.instruments ?? []);
-  const [instrumentLevels, setInstrumentLevels] = useState<Record<string, string>>(draft?.instrumentLevels ?? {});
-  const [selectedStyles, setSelectedStyles] = useState<string[]>(draft?.styles ?? []);
-  const [bio, setBio] = useState(draft?.bio ?? '');
-  const [groups, setGroups] = useState<GroupMembershipDraft[]>(draft?.groups ?? []);
+  const [musicianName, setMusicianName] = useState('');
+  const [city, setCity] = useState('');
+  const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
+  const [instrumentLevels, setInstrumentLevels] = useState<Record<string, string>>({});
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [bio, setBio] = useState('');
+  const [groups, setGroups] = useState<GroupMembershipDraft[]>([]);
+  const initialGroupIds = useRef<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    void Promise.all([getMusicianProfile().catch((reason: unknown) => {
+      if (reason instanceof ApiError && reason.status === 404) return null;
+      throw reason;
+    }), listUserGroups()]).then(([profile, remoteGroups]) => {
+      if (profile) {
+        setMusicianName(profile.musicianName);
+        setCity(profile.zone.ville);
+        setSelectedInstruments(profile.instruments.map((item) => item.instrument));
+        setInstrumentLevels(Object.fromEntries(profile.instruments.map((item) => [item.instrument, item.niveau])));
+        setSelectedStyles(profile.styles);
+        setBio(profile.bio ?? '');
+      }
+      initialGroupIds.current = remoteGroups.map((group) => group.id);
+      setGroups(remoteGroups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        city: group.zone.ville,
+        position: instruments[0],
+        status: group.status,
+        description: group.description ?? '',
+      })));
+    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Impossible de charger le profil.'))
+      .finally(() => setLoading(false));
+  }, []);
 
   const addGroup = () => setGroups((current) => [...current, {
     name: '',
@@ -146,19 +87,49 @@ export function ProfilePage() {
       : [...current, style]);
   };
 
-  const save = () => {
-    localStorage.setItem('accroche.profileDraft', JSON.stringify({
+  const save = async () => {
+    setError('');
+    const input = {
       musicianName,
-      city,
-      instruments: selectedInstruments,
-      instrumentLevels,
+      status: 'amateur' as const,
+      instruments: selectedInstruments.map((instrument) => ({ instrument, niveau: (instrumentLevels[instrument] ?? 'debutant') as PositionLevel })),
       styles: selectedStyles,
+      objective: ['join_group'] as MusicianObjective[],
+      availabilities: [],
       bio,
-      groups,
-    }));
-    setSaved(true);
+      zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 30, ville: city },
+    };
+    try {
+      const groupPayloads = groups.map((group) => ({
+        name: group.name,
+        styles: [],
+        status: group.status,
+        description: group.description || undefined,
+        audioLinks: [],
+        zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 30, ville: group.city },
+      }));
+      const savedGroups = await Promise.all(groupPayloads.map((group, index) => {
+        const groupId = groups[index].id;
+        return groupId ? updateUserGroup(groupId, group) : createUserGroup(group);
+      }));
+      await Promise.all(initialGroupIds.current
+        .filter((groupId) => !groups.some((group) => group.id === groupId))
+        .map(deleteUserGroup));
+      setGroups((current) => current.map((group, index) => ({ ...group, id: savedGroups[index].id })));
+      initialGroupIds.current = savedGroups.map((group) => group.id);
+      try {
+        await updateMusicianProfile(input);
+      } catch (reason) {
+        if (!(reason instanceof ApiError) || reason.status !== 404) throw reason;
+        await createMusicianProfile(input);
+      }
+      setSaved(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible d’enregistrer le profil.');
+    }
   };
 
+  if (loading) return <section><p className="form-hint">Chargement du profil…</p></section>;
   return <section>
     <header className="page-heading">
       <span className="eyebrow">Mon profil</span>
@@ -221,18 +192,8 @@ export function ProfilePage() {
           <button className="button button-secondary" type="button" onClick={addGroup}>+ Ajouter un groupe</button>
         </fieldset>
         <button className="button button-primary" type="submit">Enregistrer ma vitrine</button>
-        {saved && <p className="form-notice" role="status">Vitrine enregistrée sur cet appareil.</p>}
-        <section className="surface-card published-requests">
-          <h2>Mes demandes publiées</h2>
-          {requests.length === 0 && <p className="form-hint">Vous n'avez pas encore publié de demande pour un groupe.</p>}
-          {requests.map((request, index) => <article className="request-card" key={`${request.name}-${index}`}>
-            <div className="group-heading"><h3>{request.name}</h3><span className="request-city">{request.city}</span></div>
-            <p>{request.description}</p>
-            {request.styles.length > 0 && <div className="tag-list">{request.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div>}
-            <h4>Postes recherchés</h4>
-            <ul>{request.requestedInstruments.map((position) => <li key={`${position.instrument}-${position.niveau}`}>{position.instrument} — {levelLabel(position.niveau)}</li>)}</ul>
-          </article>)}
-        </section>
+        {saved && <p className="form-notice" role="status">Vitrine enregistrée.</p>}
+        {error && <p className="form-notice error" role="alert">{error}</p>}
       </form>
       <aside className="profile-showcase surface-card">
         <span className="eyebrow">Aperçu public</span>

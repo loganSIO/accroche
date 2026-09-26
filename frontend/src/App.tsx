@@ -47,7 +47,7 @@ function App() {
         {route === '/group-request' && (auth.isAuthenticated ? <GroupRequestPage onNavigate={navigate} /> : <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />)}
       </main>
       <Footer />
-      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} onAuthenticated={(userId) => { auth.signIn(userId); setAuthMode(null); navigate('/profile'); }} />}
+      {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} onAuthenticated={(session) => { auth.signIn(session); setAuthMode(null); navigate('/profile'); }} />}
     </div>
   );
 }
