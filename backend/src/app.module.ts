@@ -9,6 +9,10 @@ import { GroupsController } from './presentation/controllers/groups.controller.j
 import { MapController } from './presentation/controllers/map.controller.js';
 import { PositionsController } from './presentation/controllers/positions.controller.js';
 import { AuthController } from './presentation/controllers/auth.controller.js';
+import { UsersController } from './presentation/controllers/users.controller.js';
+import { AccessTokenGuard } from './presentation/guards/access-token.guard.js';
+import { MusicianProfileController } from './presentation/controllers/musician-profile.controller.js';
+import { UserGroupsController } from './presentation/controllers/user-groups.controller.js';
 
 @Module({
   imports: [
@@ -25,7 +29,10 @@ import { AuthController } from './presentation/controllers/auth.controller.js';
     MapController,
     PositionsController,
     AuthController,
+    UsersController,
+    MusicianProfileController,
+    UserGroupsController,
   ],
-  providers: [AppService],
+  providers: [AppService, AccessTokenGuard],
 })
 export class AppModule {}

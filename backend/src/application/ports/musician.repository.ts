@@ -5,6 +5,7 @@ export interface CreateMusicianInput {
   password: string;
   city: string;
   status: 'amateur' | 'pro';
+  musicianName?: string;
   bio?: string;
   objective?: string[];
   instruments: { instrument: string; niveau: string }[];

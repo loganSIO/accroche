@@ -19,8 +19,22 @@ model User {
 
   musicianProfile MusicianProfile?
   groupProfiles   GroupProfile[]
+  refreshTokens   RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 // --- Statuts ---------------------------------------------------------------
@@ -77,6 +91,7 @@ model MusicianProfile {
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   zoneId    String
   zone      Zone         @relation(fields: [zoneId], references: [id])
+  musicianName String    @default("")
   status    MemberStatus
   objective String[]
   bio       String?

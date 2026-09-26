@@ -11,4 +11,9 @@ export class UserPrismaRepository implements UserRepository {
 
     return { id: user.id, email: user.email, passwordHash: user.password };
   }
+
+  async findById(id: string): Promise<Omit<AuthenticatedUser, 'passwordHash'> | null> {
+    const user = await prisma.user.findUnique({ where: { id } });
+    return user ? { id: user.id, email: user.email } : null;
+  }
 }

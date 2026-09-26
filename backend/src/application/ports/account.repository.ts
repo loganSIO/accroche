@@ -3,6 +3,7 @@ export interface RegisterAccountInput {
   password: string;
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
   musician?: {
+    musicianName?: string;
     status: 'amateur' | 'pro';
     instruments: { instrument: string; niveau: string }[];
     styles: string[];

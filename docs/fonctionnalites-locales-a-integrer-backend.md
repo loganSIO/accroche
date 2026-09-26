@@ -24,6 +24,9 @@ Le frontend peut déjà utiliser les routes suivantes :
 | Lecture des clusters de la carte | `GET /api/v1/map` |
 | Lecture des matchs d'un poste | `GET /api/v1/positions/:id/matches` |
 | Connexion (authentification) | `POST /api/v1/auth/login` |
+| Renouvellement de session | `POST /api/v1/auth/refresh` |
+| Déconnexion | `POST /api/v1/auth/logout` |
+| Lecture de l'utilisateur connecté | `GET /api/v1/users/me` |
 
 Les payloads frontend associés doivent continuer à respecter les DTO backend,
 notamment :
@@ -53,15 +56,19 @@ afin de ne pas bloquer la visualisation de l'application.
 Le formulaire de connexion vérifie actuellement ces comptes locaux et ne
 contacte pas le backend.
 
-La route `POST /api/v1/auth/login` existe désormais côté backend
-(`backend/src/presentation/controllers/auth.controller.ts`, JWT). Reste à
-brancher côté frontend : remplacer `authenticateLocalAccount` par l'appel
-réel à cette route (cf. étapes ci-dessous). Le refresh, le logout et
-`/users/me` restent à créer côté backend.
+Les routes d'authentification sont désormais disponibles côté backend :
+`POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`,
+`POST /api/v1/auth/logout` et `GET /api/v1/users/me`. La connexion retourne un
+JWT d'accès et un refresh token opaque, dont seule l'empreinte est conservée
+en base. Le refresh token est renouvelé à chaque appel de refresh et peut être
+révoqué lors de la déconnexion.
+
+Reste à brancher côté frontend : remplacer `authenticateLocalAccount` par
+l'appel réel à ces routes (cf. étapes ci-dessous).
 
 ### À intégrer dans le backend
 
-Compléter l'authentification déjà démarrée avec :
+Routes d'authentification implémentées :
 
 ```text
 POST /api/v1/auth/refresh
@@ -105,19 +112,19 @@ La page affiche également un aperçu de vitrine à partir de ces données local
 
 ### À intégrer dans le backend
 
-Le modèle Prisma actuel ne contient pas encore de champ `musicianName`.
-Il faut donc décider si ce nom correspond :
-
-- à un nouveau champ `displayName` sur `MusicianProfile` ;
-- ou à un champ de présentation ajouté dans une évolution du modèle.
-
-Prévoir ensuite des routes authentifiées :
+Le modèle Prisma contient désormais le champ `musicianName` sur
+`MusicianProfile`.
+Les routes authentifiées suivantes sont maintenant disponibles :
 
 ```text
 GET   /api/v1/users/me/musician-profile
 POST  /api/v1/users/me/musician-profile
 PATCH /api/v1/users/me/musician-profile
 ```
+
+La création est refusée si le compte possède déjà un profil musicien. La mise
+à jour partielle remplace les collections fournies (`instruments`, `styles` et
+`availabilities`) et conserve les autres champs lorsqu'ils ne sont pas envoyés.
 
 Le payload devra suivre la structure du DTO musicien existant :
 
@@ -173,6 +180,11 @@ GET  /api/v1/users/me/groups
 PATCH /api/v1/groups/:id
 DELETE /api/v1/groups/:id
 ```
+
+Ces routes sont maintenant implémentées. La création et la liste sont limitées
+à l'utilisateur authentifié ; la modification et la suppression vérifient que
+le groupe appartient bien à cet utilisateur. Le poste occupé par le musicien
+dans le groupe n'est pas modélisé dans cette étape.
 
 Le payload groupe doit respecter la forme actuelle :
 
@@ -416,4 +428,3 @@ Lorsque les routes seront disponibles :
 | `accroche.userId` | Session frontend courante | Token/session backend |
 | `accroche.profileDraft` | Profil musicien et groupes saisis | API de profil et memberships |
 | `accroche.groupRequests` | Demandes de groupes et postes recherchés | GroupProfile + OpenPosition |
-

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { GroupPrismaRepository } from '../../infrastructure/repositories/group-prisma.repository.js';
 import { OpenPositionPrismaRepository } from '../../infrastructure/repositories/open-position-prisma.repository.js';
 import { MusicianPrismaRepository } from '../../infrastructure/repositories/musician-prisma.repository.js';
@@ -7,6 +7,8 @@ import { CreateOpenPositionForGroup, GroupNotFoundError } from '../../applicatio
 import { RecalculateMatchesForMusician } from '../../application/use-cases/recalculate-matches-for-musician.js';
 import { RecalculateMatchesForNewPosition } from '../../application/use-cases/recalculate-matches-for-new-position.js';
 import { CreateOpenPositionDto } from '../dtos/create-open-position.dto.js';
+import { UpdateGroupProfileDto } from '../dtos/group-profile.dto.js';
+import { AccessTokenGuard, type AuthenticatedRequest } from '../guards/access-token.guard.js';
 
 @Controller('api/v1/groups')
 export class GroupsController {
@@ -31,8 +33,35 @@ export class GroupsController {
     if (!group) {
       throw new NotFoundException(`Groupe ${id} introuvable.`);
     }
+
     return {
       data: group,
+      meta: { timestamp: new Date().toISOString(), version: 'v1' },
+    };
+  }
+
+  @Patch(':id')
+  @UseGuards(AccessTokenGuard)
+  async update(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: UpdateGroupProfileDto,
+  ) {
+    const group = await this.groupRepository.updateForUser(id, request.user.userId, dto);
+    if (!group) throw new NotFoundException(`Groupe ${id} introuvable.`);
+    return {
+      data: group,
+      meta: { timestamp: new Date().toISOString(), version: 'v1' },
+    };
+  }
+
+  @Delete(':id')
+  @UseGuards(AccessTokenGuard)
+  async remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    const deleted = await this.groupRepository.deleteForUser(id, request.user.userId);
+    if (!deleted) throw new NotFoundException(`Groupe ${id} introuvable.`);
+    return {
+      data: { success: true },
       meta: { timestamp: new Date().toISOString(), version: 'v1' },
     };
   }
