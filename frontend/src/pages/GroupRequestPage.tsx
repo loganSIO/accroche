@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CityField } from '../components/profile/CityField';
 import type { AppRoute } from '../App';
-import type { PositionLevel, RegisterGroupInput } from '../api/users';
+import { createOpenPosition, createUserGroup } from '../api/groups';
+import type { PositionLevel, ZoneInput } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -27,26 +28,24 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
   const updatePosition = (index: number, update: Partial<PositionDraft>) => setPositions((current) => current.map((position, positionIndex) => positionIndex === index ? { ...position, ...update } : position));
   const toggleStyle = (style: string) => setGroupStyles((current) => current.includes(style) ? current.filter((item) => item !== style) : [...current, style]);
 
-  const save = () => {
-    const group: RegisterGroupInput = {
+  const save = async () => {
+    const zone: ZoneInput = { latitude: 48.5734, longitude: 7.7521, rayonKm: 30, ville: city };
+    const group = {
       name,
       styles: groupStyles,
-      status: 'association',
+      status: 'association' as const,
       description,
       audioLinks: [],
-      requestedInstruments: positions,
+      zone,
     };
-    const request = { ...group, city };
-    localStorage.setItem('accroche.groupRequests', JSON.stringify([
-      ...JSON.parse(localStorage.getItem('accroche.groupRequests') ?? '[]') as unknown[],
-      request,
-    ]));
-    const profile = localStorage.getItem('accroche.profileDraft');
-    if (profile) {
-      const parsed = JSON.parse(profile) as { groups?: unknown[] };
-      localStorage.setItem('accroche.profileDraft', JSON.stringify({ ...parsed, groups: [...(parsed.groups ?? []), { name, city, position: positions[0]?.instrument ?? instruments[0], status: group.status, description }] }));
+    try {
+      const created = await createUserGroup(group);
+      await Promise.all(positions.map((position) => createOpenPosition(created.id, position)));
+      setSaved(true);
+    } catch (error) {
+      setSaved(false);
+      window.alert(error instanceof Error ? error.message : 'Impossible de publier la demande.');
     }
-    setSaved(true);
   };
 
   return <section>

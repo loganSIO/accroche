@@ -19,10 +19,12 @@ export interface RegisterGroupInput {
   requestedInstruments: RequestedInstrument[];
 }
 
+export interface ZoneInput { latitude: number; longitude: number; rayonKm: number; ville: string; }
+
 export interface RegisterAccountInput {
   email: string;
   password: string;
-  zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
+  zone: ZoneInput;
   musician?: {
     status: MemberStatus;
     instruments: RequestedInstrument[];
@@ -42,3 +44,22 @@ export interface RegisterAccountInput {
 }
 export const registerAccount = (input: RegisterAccountInput) =>
   request<{ userId: string; musicianProfileId: string | null; groupIds: string[] }>('/accounts', { method: 'POST', body: JSON.stringify(input) });
+
+export interface MusicianProfileInput {
+  musicianName: string;
+  status: MemberStatus;
+  instruments: RequestedInstrument[];
+  styles: string[];
+  objective: MusicianObjective[];
+  availabilities: { jourSemaine: string; creneauxJournee: 'matin' | 'apres-midi' | 'soir' }[];
+  bio?: string;
+  zone: ZoneInput;
+}
+
+export interface MusicianProfile extends MusicianProfileInput { id: string; }
+
+export const getMusicianProfile = () => request<MusicianProfile>('/users/me/musician-profile');
+export const createMusicianProfile = (input: MusicianProfileInput) =>
+  request<MusicianProfile>('/users/me/musician-profile', { method: 'POST', body: JSON.stringify(input) });
+export const updateMusicianProfile = (input: Partial<MusicianProfileInput>) =>
+  request<MusicianProfile>('/users/me/musician-profile', { method: 'PATCH', body: JSON.stringify(input) });

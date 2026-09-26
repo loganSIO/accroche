@@ -1,19 +1,18 @@
 import { useState } from 'react';
-import { authenticateLocalAccount } from '../../api/localAuth';
+import { login } from '../../api/auth';
+import type { AuthSession } from '../../api/client';
 
-export function LoginForm({ onAuthenticated }: { onAuthenticated: (userId: string) => void }) {
+export function LoginForm({ onAuthenticated }: { onAuthenticated: (session: AuthSession) => void }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   return <form className="auth-form" onSubmit={(event) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const userId = authenticateLocalAccount(String(form.get('email')), String(form.get('password')));
-    if (!userId) {
-      setError('Compte introuvable dans ce navigateur. Créez d’abord un compte depuis ce formulaire.');
-      return;
-    }
-    setSubmitted(true);
-    onAuthenticated(userId);
+    setError('');
+    void login(String(form.get('email')), String(form.get('password'))).then((session) => {
+      setSubmitted(true);
+      onAuthenticated(session);
+    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Connexion impossible.'));
   }}>
     <label>Email<input name="email" type="email" required autoComplete="email" /></label>
     <label>Mot de passe<input name="password" type="password" required minLength={8} autoComplete="current-password" /></label>
