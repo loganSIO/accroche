@@ -1,32 +1,91 @@
-import { useMemo, useState } from 'react';
-import { UserMarker } from './UserMarker';
+import { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-export interface MapProfile { id: string; label: string; city: string; type: 'Musicien' | 'Groupe' | 'Founding'; instrument: string; style: string; }
-const profiles: MapProfile[] = [
-  { id: '1', label: 'Léa · Batterie', city: 'Strasbourg', type: 'Musicien', instrument: 'Batterie', style: 'Rock' },
-  { id: '2', label: 'Les Ondes', city: 'Strasbourg', type: 'Groupe', instrument: 'Guitare', style: 'Indie' },
-  { id: '3', label: 'Projet funk', city: 'Schiltigheim', type: 'Founding', instrument: 'Basse', style: 'Funk' },
+const STRASBOURG: L.LatLngExpression = [48.5734, 7.7521];
+
+const profileMarkers: Array<{
+  position: L.LatLngExpression;
+  label: string;
+  detail: string;
+  color: string;
+}> = [
+  { position: [48.5734, 7.7521], label: 'Strasbourg', detail: 'Communauté musicale', color: '#3155d9' },
+  { position: [48.5847, 7.7415], label: 'Quartier Centre', detail: 'Musiciens et groupes', color: '#7a4fd6' },
+  { position: [48.6055, 7.7497], label: 'Schiltigheim', detail: 'Groupes actifs', color: '#d66a4f' },
 ];
 
+function markerIcon(color: string) {
+  return L.divIcon({
+    className: 'map-leaflet-marker-wrapper',
+    html: `<span class="map-leaflet-marker" style="--marker-color:${color}"><span></span></span>`,
+    iconSize: [24, 32],
+    iconAnchor: [12, 32],
+    popupAnchor: [0, -30],
+  });
+}
+
 export function MapPanel() {
-  const [city, setCity] = useState('');
-  const [type, setType] = useState('');
-  const [style, setStyle] = useState('');
-  const [instrument, setInstrument] = useState('');
-  const filteredProfiles = useMemo(() => profiles.filter((profile) =>
-    (!city || profile.city === city) && (!type || profile.type === type) && (!style || profile.style === style) && (!instrument || profile.instrument === instrument),
-  ), [city, type, style, instrument]);
-  return <section className="map-card" aria-label="Carte publique des profils">
-    <div className="map-toolbar">
-      <label>Ville<select value={city} onChange={(event) => setCity(event.target.value)}><option value="">Toutes</option><option>Strasbourg</option><option>Schiltigheim</option></select></label>
-      <label>Profil<select value={type} onChange={(event) => setType(event.target.value)}><option value="">Tous</option><option>Musicien</option><option>Groupe</option><option>Founding</option></select></label>
-      <label>Instrument<select value={instrument} onChange={(event) => setInstrument(event.target.value)}><option value="">Tous</option><option>Batterie</option><option>Guitare</option><option>Basse</option></select></label>
-      <label>Style<select value={style} onChange={(event) => setStyle(event.target.value)}><option value="">Tous</option><option>Rock</option><option>Indie</option><option>Funk</option></select></label>
-    </div>
-    <div className="map-surface">{filteredProfiles.map((profile, index) => <span className={`map-marker marker-${index + 1}`} key={profile.id}><UserMarker label={profile.label} city={profile.city} /></span>)}
-      {filteredProfiles.length === 0 && <p className="map-empty">Aucun profil pour ces filtres.</p>}
-      <span className="map-label">Strasbourg et environs</span>
-    </div>
-    <p className="map-caption">{filteredProfiles.length} profil{filteredProfiles.length > 1 ? 's' : ''} actif{filteredProfiles.length > 1 ? 's' : ''} visible{filteredProfiles.length > 1 ? 's' : ''}</p>
-  </section>;
+  const mapElement = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapElement.current || mapRef.current) return;
+
+    const map = L.map(mapElement.current, {
+      center: STRASBOURG,
+      zoom: 11,
+      zoomControl: false,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    profileMarkers.forEach((profile) => {
+      L.marker(profile.position, { icon: markerIcon(profile.color) })
+        .addTo(map)
+        .bindPopup(`<strong>${profile.label}</strong><br>${profile.detail}`);
+    });
+
+    L.circle(STRASBOURG, {
+      radius: 12000,
+      color: '#3155d9',
+      weight: 1,
+      opacity: 0.45,
+      fillColor: '#3155d9',
+      fillOpacity: 0.08,
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  const recenter = () => {
+    mapRef.current?.setView(STRASBOURG, 11, { animate: true });
+  };
+
+  return (
+    <section className="map-card" aria-label="Carte interactive des profils autour de Strasbourg">
+      <div className="map-card-heading">
+        <div>
+          <span className="eyebrow">La communauté près de vous</span>
+          <h2>Strasbourg et environs</h2>
+        </div>
+        <button className="map-recenter" type="button" onClick={recenter}>
+          Recentrer
+        </button>
+      </div>
+      <div className="map-surface map-leaflet-surface" ref={mapElement} />
+      <p className="map-caption">Déplacez la carte et utilisez le zoom pour vous repérer.</p>
+    </section>
+  );
 }
