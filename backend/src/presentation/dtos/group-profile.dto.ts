@@ -1,5 +1,10 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsIn, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+
+export class RequestedInstrumentDto {
+  @IsString() instrument!: string;
+  @IsIn(['debutant', 'intermediaire', 'avance', 'expert']) niveau!: string;
+}
 
 export class GroupProfileZoneDto {
   @IsNumber() latitude!: number;
@@ -15,6 +20,11 @@ export class CreateGroupProfileDto {
   @IsOptional() @IsString() description?: string;
   @IsArray() @IsString({ each: true }) audioLinks!: string[];
   @ValidateNested() @Type(() => GroupProfileZoneDto) zone!: GroupProfileZoneDto;
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => RequestedInstrumentDto)
+  requestedInstruments!: RequestedInstrumentDto[];
 }
 
 export class UpdateGroupProfileDto {

@@ -2,13 +2,9 @@
 
 ## Objet du document
 
-Le frontend permet actuellement de parcourir et tester le parcours utilisateur
-sans disposer de toutes les routes backend nécessaires. Certaines fonctionnalités
-sont donc simulées avec `localStorage`. Elles devront être remplacées par des
-appels API lorsque les routes backend correspondantes seront disponibles.
-
-L'authentification locale est volontairement conservée pour permettre de tester
-l'interface dans l'attente des routes d'authentification backend.
+Le frontend utilise désormais le backend pour l'authentification, le profil
+musicien et les demandes de groupe. Les fonctionnalités de contacts, de
+messagerie et certaines vues de découverte restent à compléter.
 
 ## Fonctionnalités déjà prises en charge par le backend
 
@@ -27,6 +23,13 @@ Le frontend peut déjà utiliser les routes suivantes :
 | Renouvellement de session | `POST /api/v1/auth/refresh` |
 | Déconnexion | `POST /api/v1/auth/logout` |
 | Lecture de l'utilisateur connecté | `GET /api/v1/users/me` |
+| Lecture du profil musicien connecté | `GET /api/v1/users/me/musician-profile` |
+| Création du profil musicien connecté | `POST /api/v1/users/me/musician-profile` |
+| Mise à jour du profil musicien connecté | `PATCH /api/v1/users/me/musician-profile` |
+| Création d'une demande de groupe | `POST /api/v1/users/me/groups` |
+| Liste des demandes de groupe de l'utilisateur | `GET /api/v1/users/me/groups` |
+| Modification d'une demande de groupe | `PATCH /api/v1/groups/:id` |
+| Suppression d'une demande de groupe | `DELETE /api/v1/groups/:id` |
 
 Les payloads frontend associés doivent continuer à respecter les DTO backend,
 notamment :
@@ -42,19 +45,12 @@ notamment :
 
 ### État actuel
 
-L'inscription appelle `POST /api/v1/accounts` lorsque cela est possible, puis
-enregistre localement les identifiants nécessaires au test :
+L'inscription appelle `POST /api/v1/accounts`, puis se connecte via le backend.
+Le frontend conserve uniquement les éléments de session nécessaires :
 
-- clé `accroche.localAccounts` ;
-- clé `accroche.userId` pour la session courante ;
-- email et mot de passe conservés localement pour permettre une reconnexion de
-  démonstration.
-
-Si l'API renvoie une erreur `400`, le frontend crée un compte local de secours
-afin de ne pas bloquer la visualisation de l'application.
-
-Le formulaire de connexion vérifie actuellement ces comptes locaux et ne
-contacte pas le backend.
+- `accroche.accessToken` ;
+- `accroche.refreshToken` ;
+- `accroche.userId`.
 
 Les routes d'authentification sont désormais disponibles côté backend :
 `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`,
@@ -63,8 +59,8 @@ JWT d'accès et un refresh token opaque, dont seule l'empreinte est conservée
 en base. Le refresh token est renouvelé à chaque appel de refresh et peut être
 révoqué lors de la déconnexion.
 
-Reste à brancher côté frontend : remplacer `authenticateLocalAccount` par
-l'appel réel à ces routes (cf. étapes ci-dessous).
+Le module `localAuth.ts` et la clé `accroche.localAccounts` sont des vestiges
+non utilisés par le parcours courant et pourront être supprimés.
 
 ### À intégrer dans le backend
 
@@ -80,18 +76,15 @@ La réponse de connexion devra fournir une identité de session exploitable par
 le frontend, idéalement un access token court et un mécanisme de renouvellement.
 Le mot de passe ne doit jamais être conservé dans `localStorage`.
 
-Une fois ces routes disponibles, il faudra :
-
-1. supprimer le fallback de création locale en cas de `400` ;
-2. remplacer `authenticateLocalAccount` par l'appel de login ;
-3. stocker uniquement le mécanisme de session validé par le backend ;
-4. gérer les expirations et les erreurs `401`.
+Le client renouvelle automatiquement la session après une réponse `401` lorsque
+le refresh token est encore valide, puis efface la session si le renouvellement
+échoue.
 
 ## 2. Mise à jour du profil musicien
 
 ### État actuel
 
-La page `/profile` permet de renseigner localement :
+La page `/profile` permet de renseigner :
 
 - le nom ou nom de scène du musicien ;
 - la ville ;
@@ -102,13 +95,8 @@ La page `/profile` permet de renseigner localement :
 - les styles musicaux ;
 - les groupes auxquels le musicien participe.
 
-Ces données sont stockées dans :
-
-```text
-accroche.profileDraft
-```
-
-La page affiche également un aperçu de vitrine à partir de ces données locales.
+Ces données sont persistées par le backend sur le profil musicien. La page
+affiche également un aperçu de vitrine à partir de ces données.
 
 ### À intégrer dans le backend
 
@@ -123,8 +111,9 @@ PATCH /api/v1/users/me/musician-profile
 ```
 
 La création est refusée si le compte possède déjà un profil musicien. La mise
-à jour partielle remplace les collections fournies (`instruments`, `styles` et
-`availabilities`) et conserve les autres champs lorsqu'ils ne sont pas envoyés.
+à jour partielle remplace les collections fournies (`instruments`, `styles`,
+`availabilities` et `showcaseGroups`) et conserve les autres champs lorsqu'ils
+ne sont pas envoyés.
 
 Le payload devra suivre la structure du DTO musicien existant :
 
@@ -148,6 +137,13 @@ Le payload devra suivre la structure du DTO musicien existant :
     rayonKm: number;
     ville: string;
   };
+  showcaseGroups: Array<{
+    name: string;
+    city: string;
+    position: string;
+    status: 'association' | 'professionnel';
+    description: string;
+  }>;
 }
 ```
 
@@ -158,7 +154,7 @@ frontend.
 
 ### État actuel
 
-La section **Mes groupes** permet de saisir localement :
+La section **Mes groupes** permet de saisir :
 
 - le nom du groupe ;
 - la ville ;
@@ -166,13 +162,20 @@ La section **Mes groupes** permet de saisir localement :
 - le statut du groupe ;
 - la description.
 
-Ces informations sont enregistrées dans `accroche.profileDraft`.
+Ces informations sont enregistrées avec le `MusicianProfile` en base, dans la
+collection dédiée `MusicianShowcaseGroup`.
+
+Ces groupes sont uniquement une vitrine rattachée aux informations publiques
+du musicien. Ils ne sont pas des `GroupProfile` publiés, ne sont pas placés sur
+la carte et ne génèrent aucun `OpenPosition`, match ou demande active.
 
 ### À intégrer dans le backend
 
-Le modèle prévoit qu'un `GroupProfile` est rattaché à un `User`. Il faut donc
-ajouter une route authentifiée permettant de créer un groupe sans recréer de
-compte :
+Le modèle prévoit qu'un `GroupProfile` est rattaché à un `User`. Pour les
+groupes déjà renseignés par un musicien, une collection `MusicianShowcaseGroup`
+est rattachée à son `MusicianProfile` et est lue/mise à jour avec les routes
+du profil musicien. Les routes de demande active permettent de créer un groupe
+sans recréer de compte :
 
 ```text
 POST /api/v1/users/me/groups
@@ -183,8 +186,9 @@ DELETE /api/v1/groups/:id
 
 Ces routes sont maintenant implémentées. La création et la liste sont limitées
 à l'utilisateur authentifié ; la modification et la suppression vérifient que
-le groupe appartient bien à cet utilisateur. Le poste occupé par le musicien
-dans le groupe n'est pas modélisé dans cette étape.
+le groupe appartient bien à cet utilisateur. Le poste occupé est stocké dans
+`MusicianShowcaseGroup.position` pour la vitrine et ne doit pas être confondu
+avec un `OpenPosition`, qui représente un poste recherché.
 
 Le payload groupe doit respecter la forme actuelle :
 
@@ -204,33 +208,18 @@ Le payload groupe doit respecter la forme actuelle :
 }
 ```
 
-Le poste occupé par le musicien dans un groupe n'est pas actuellement modélisé
-par `GroupProfile`. Il faudra décider si cette information nécessite une
-nouvelle entité de membre, par exemple :
-
-```text
-GroupMembership
-- id
-- groupProfileId
-- musicianProfileId
-- instrument
-- createdAt
-```
-
-Cette information ne doit pas être confondue avec `OpenPosition`, qui décrit un
-poste recherché par un groupe.
+Le payload de création d'une demande active ajoute obligatoirement
+`requestedInstruments`, comme décrit dans la section 4. Ces postes sont des
+`OpenPosition` et ne correspondent pas au poste occupé dans la vitrine.
 
 ## 4. Publication d'une demande de groupe
 
 ### État actuel
 
-La page `/group-request` enregistre localement une demande dans :
+La page `/group-request` publie une demande via
+`POST /api/v1/users/me/groups`.
 
-```text
-accroche.groupRequests
-```
-
-Une demande locale contient :
+Une demande publiée contient :
 
 - le nom du groupe ;
 - la ville ;
@@ -255,7 +244,11 @@ La structure métier distingue correctement :
 - `GroupProfile` : identité du groupe ;
 - `OpenPosition` : poste recherché par le groupe.
 
-La création complète devrait être orchestrée par une route authentifiée :
+Les groupes saisis dans **Mon profil** restent donc distincts de cette
+publication. Seule la page **Créer une demande** crée un `GroupProfile` et ses
+`OpenPosition` destinés à la carte et au matching.
+
+La création complète est orchestrée par une route authentifiée :
 
 ```text
 POST /api/v1/users/me/groups
@@ -278,8 +271,16 @@ avec un payload de groupe contenant :
 }
 ```
 
-Le backend doit créer le `GroupProfile`, puis un `OpenPosition` par élément de
-`requestedInstruments`. Pour la gestion ultérieure d'un groupe déjà créé,
+La route crée le `GroupProfile`, sa `Zone` et tous les `OpenPosition` associés
+dans une transaction unique. `requestedInstruments` est obligatoire et doit
+contenir au moins un poste recherché. Chaque entrée devient un poste `GROUP`
+ouvert rattaché au groupe. Les groupes éventuellement renseignés dans le profil
+musicien restent des éléments de vitrine et ne créent pas de demande active.
+
+Le backend crée le `GroupProfile`, puis un `OpenPosition` par élément de
+`requestedInstruments`. La liste `GET /api/v1/users/me/groups` retourne aussi
+les postes associés afin de les afficher dans l'onglet **Mes demandes** de la
+page **Mon profil**. Pour la gestion ultérieure d'un groupe déjà créé,
 l'endpoint existant reste adapté :
 
 ```text
@@ -295,7 +296,7 @@ Cet endpoint reçoit un seul poste par appel :
 }
 ```
 
-Il faudra également prévoir :
+Les routes suivantes restent à prévoir pour gérer les postes après publication :
 
 ```text
 GET    /api/v1/users/me/groups/:groupId/positions
@@ -310,7 +311,8 @@ le groupe ciblé.
 
 ### État actuel
 
-La page profil lit `accroche.groupRequests` et affiche :
+La page profil appelle `GET /api/v1/users/me/groups` et affiche dans l'onglet
+**Mes demandes** :
 
 - les groupes concernés ;
 - leur ville ;
@@ -318,30 +320,19 @@ La page profil lit `accroche.groupRequests` et affiche :
 - leurs styles ;
 - les postes et niveaux recherchés.
 
-### À intégrer dans le backend
+### Reste à faire
 
-Ajouter une route authentifiée :
-
-```text
-GET /api/v1/users/me/group-requests
-```
-
-ou, si les demandes sont représentées directement par les groupes et postes :
-
-```text
-GET /api/v1/users/me/groups
-GET /api/v1/users/me/groups/:groupId/positions
-```
-
-Le frontend devra remplacer la lecture de `localStorage` par ces appels et
-gérer les états de chargement, d'erreur et de mise à jour.
+La lecture est déjà branchée sur `GET /api/v1/users/me/groups`. Il reste à
+ajouter, si nécessaire, des routes de lecture et de modification unitaire des
+postes pour permettre leur gestion après publication.
 
 ## 6. Profils publics et vitrine
 
 ### État actuel
 
-L'aperçu public de la page profil est local et n'est visible que dans le
-navigateur de l'utilisateur.
+L'aperçu public de la page profil est affiché localement dans l'interface
+connectée. Les données du profil et les groupes de vitrine sont toutefois
+persistés en base.
 
 La page **Découvrir** et les éléments de vitrine utilisent encore des données
 de démonstration.
@@ -408,7 +399,8 @@ la conversation.
 
 Lorsque les routes seront disponibles :
 
-1. remplacer les lectures et écritures `localStorage` par les modules API ;
+1. supprimer les modules de données de démonstration devenus inutiles
+   (`localAuth.ts`) ;
 2. conserver les types partagés alignés sur les DTO et réponses backend ;
 3. supprimer le fallback d'authentification locale ;
 4. ajouter la gestion des erreurs `401`, `403`, `404` et `409` ;
@@ -424,7 +416,7 @@ Lorsque les routes seront disponibles :
 
 | Clé `localStorage` | Contenu | Remplacement prévu |
 |---|---|---|
-| `accroche.localAccounts` | Comptes de démonstration frontend | Authentification backend |
+| `accroche.localAccounts` | Ancien stockage de comptes, non utilisé par le parcours courant | Supprimer |
 | `accroche.userId` | Session frontend courante | Token/session backend |
-| `accroche.profileDraft` | Profil musicien et groupes saisis | API de profil et memberships |
-| `accroche.groupRequests` | Demandes de groupes et postes recherchés | GroupProfile + OpenPosition |
+| `accroche.profileDraft` | Ancien brouillon de profil, non utilisé par le parcours courant | Supprimer |
+| `accroche.groupRequests` | Ancien stockage de demandes, non utilisé par le parcours courant | GroupProfile + OpenPosition |

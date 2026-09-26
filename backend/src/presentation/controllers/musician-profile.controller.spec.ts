@@ -23,6 +23,13 @@ const input = {
   availabilities: [{ jourSemaine: 'mardi', creneauxJournee: 'soir' as const }],
   bio: 'Musicien strasbourgeois',
   zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+  showcaseGroups: [{
+    name: 'Les Accords',
+    city: 'Strasbourg',
+    position: 'guitare',
+    status: 'association' as const,
+    description: 'Groupe de vitrine',
+  }],
 };
 
 describe('MusicianProfileController', () => {
@@ -48,6 +55,7 @@ describe('MusicianProfileController', () => {
     expect(created.data).toMatchObject({ status: 'amateur', bio: input.bio, objective: input.objective });
     expect(result.data).toMatchObject({ id: created.data.id, styles: ['rock'] });
     expect(result.data.zone.ville).toBe('Strasbourg');
+    expect(result.data.showcaseGroups).toEqual(input.showcaseGroups);
   });
 
   it('refuse de créer un second profil pour le même compte', async () => {
@@ -77,6 +85,24 @@ describe('MusicianProfileController', () => {
       bio: 'Profil mis à jour',
     });
     expect(result.data.availabilities).toEqual(input.availabilities);
+    expect(result.data.showcaseGroups).toEqual(input.showcaseGroups);
+
+    const showcaseUpdate = await controller.update(request, {
+      showcaseGroups: [{
+        name: 'Nouveau groupe',
+        city: 'Colmar',
+        position: 'basse',
+        status: 'professionnel',
+        description: 'Nouvelle vitrine',
+      }],
+    });
+    expect(showcaseUpdate.data.showcaseGroups).toEqual([{
+      name: 'Nouveau groupe',
+      city: 'Colmar',
+      position: 'basse',
+      status: 'professionnel',
+      description: 'Nouvelle vitrine',
+    }]);
   });
 
   it('retourne une erreur si le profil est absent', async () => {

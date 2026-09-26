@@ -15,6 +15,14 @@ export interface Availability {
   creneauxJournee: 'matin' | 'apres-midi' | 'soir';
 }
 
+export interface MusicianShowcaseGroup {
+  name: string;
+  city: string;
+  position: string;
+  status: 'association' | 'professionnel';
+  description: string;
+}
+
 export interface Zone {
   latitude: number;
   longitude: number;
@@ -32,4 +40,5 @@ export interface MusicianCandidate {
   status: MemberStatus;
   objective?: string[];
   bio?: string;
+  showcaseGroups: MusicianShowcaseGroup[];
 }

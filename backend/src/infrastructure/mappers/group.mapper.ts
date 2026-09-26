@@ -1,7 +1,10 @@
 import type { GroupCandidate } from '../../application/ports/group.repository.js';
 import type { GroupProfile, Zone } from '@prisma/client';
 
-type GroupProfileWithZone = GroupProfile & { zone: Zone };
+type GroupProfileWithZone = GroupProfile & {
+  zone: Zone;
+  positions?: { instrumentRecherche: string; niveauAttendu: string }[];
+};
 
 export function toGroupCandidate(record: GroupProfileWithZone): GroupCandidate {
   return {
@@ -17,5 +20,9 @@ export function toGroupCandidate(record: GroupProfileWithZone): GroupCandidate {
       rayonKm: record.zone.rayonKm,
       ville: record.zone.ville,
     },
+    requestedInstruments: record.positions?.map((position) => ({
+      instrument: position.instrumentRecherche,
+      niveau: position.niveauAttendu,
+    })),
   };
 }
