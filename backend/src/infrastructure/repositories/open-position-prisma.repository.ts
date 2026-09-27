@@ -16,9 +16,22 @@ import { distanceKm } from '../geo/distance.js';
 // partagé si la duplication devient gênante.
 
 export class OpenPositionPrismaRepository implements OpenPositionRepository {
-  async findOpenPositionsNearZone(zone: Zone): Promise<OpenPositionCandidate[]> {
+  async findOpenPositionsNearZone(zone: Zone, excludeUserId?: string): Promise<OpenPositionCandidate[]> {
+    const excludedUserId = excludeUserId
+      ? (await prisma.musicianProfile.findUnique({ where: { id: excludeUserId }, select: { userId: true } }))?.userId
+      : undefined;
     const records = await prisma.openPosition.findMany({
-      where: { statut: 'OUVERT' },
+      where: {
+        statut: 'OUVERT',
+        ...(excludeUserId ? {
+          NOT: {
+            OR: [
+              { groupProfile: { userId: excludedUserId } },
+              { foundingProfile: { founderMusician: { userId: excludedUserId } } },
+            ],
+          },
+        } : {}),
+      },
       include: {
         groupProfile: { include: { zone: true } },
         foundingProfile: { include: { zone: true } },

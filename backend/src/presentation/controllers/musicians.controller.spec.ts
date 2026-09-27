@@ -45,7 +45,7 @@ describe('MusiciansController (intégration réelle avec Postgres)', () => {
     const position = await prisma.openPosition.create({
       data: { ownerType: 'GROUP', groupProfileId: group.id, instrumentRecherche: 'guitare', niveauAttendu: 'avance' },
     });
-    await prisma.match.create({
+    const match = await prisma.match.create({
       data: {
         musicianId: musician.id,
         positionId: position.id,
@@ -60,6 +60,7 @@ describe('MusiciansController (intégration réelle avec Postgres)', () => {
     const result = await controller.getMatches(musician.id);
     expect(result.data).toHaveLength(1);
     expect(result.data[0]).toEqual({
+      id: match.id,
       positionId: position.id,
       scoreGlobal: 87,
       sousScores: { instrument: 100, style: 80, zone: 100, disponibilite: 100, niveau: 100 },

@@ -6,6 +6,7 @@ export interface PersistedMatch extends MatchResult {
 }
 
 export interface MatchWithStatus extends PersistedMatch {
+  id: string;
   statut: string;
 }
 

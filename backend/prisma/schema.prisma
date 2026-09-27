@@ -20,6 +20,8 @@ model User {
   musicianProfile MusicianProfile?
   groupProfiles   GroupProfile[]
   refreshTokens   RefreshToken[]
+  conversationMembers ConversationMember[]
+  sentMessages    Message[] @relation("MessageSender")
 
   @@map("users")
 }
@@ -172,6 +174,7 @@ model GroupProfile {
   updatedAt   DateTime    @updatedAt
 
   positions OpenPosition[]
+  conversations Conversation[]
 
   @@map("group_profiles")
 }
@@ -251,7 +254,52 @@ model Contact {
   musicianId  String
   musician    MusicianProfile @relation(fields: [musicianId], references: [id])
   initiatedBy String
+  conversationId String? @unique
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
   createdAt   DateTime        @default(now())
 
   @@map("contacts")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  groupProfileId String?
+  groupProfile GroupProfile? @relation(fields: [groupProfileId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contact Contact?
+  members ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+  deletedAt      DateTime?
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId, deletedAt])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

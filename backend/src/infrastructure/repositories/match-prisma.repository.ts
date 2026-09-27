@@ -23,12 +23,26 @@ export class MatchPrismaRepository implements MatchRepository {
   }
 
   async findByMusicianId(musicianId: string): Promise<MatchWithStatus[]> {
+    const musician = await prisma.musicianProfile.findUnique({
+      where: { id: musicianId },
+      select: { userId: true },
+    });
+    if (!musician) return [];
     const records = await prisma.match.findMany({
-      where: { musicianId },
+      where: {
+        musicianId,
+        NOT: {
+          OR: [
+            { position: { groupProfile: { userId: musician.userId } } },
+            { position: { foundingProfile: { founderMusicianId: musicianId } } },
+          ],
+        },
+      },
       orderBy: { scoreGlobal: 'desc' },
     });
 
     return records.map((record) => ({
+      id: record.id,
       musicianId: record.musicianId,
       positionId: record.positionId,
       scoreGlobal: record.scoreGlobal,
@@ -50,6 +64,7 @@ export class MatchPrismaRepository implements MatchRepository {
   });
 
   return records.map((record) => ({
+    id: record.id,
     musicianId: record.musicianId,
     positionId: record.positionId,
     scoreGlobal: record.scoreGlobal,

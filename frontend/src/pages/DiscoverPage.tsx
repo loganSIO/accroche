@@ -3,6 +3,8 @@ import { ApiError } from '../api/client';
 import { getMatches } from '../api/matches';
 import { listPublicProfiles, type PublicGroupProfile, type PublicMusicianProfile } from '../api/publicProfiles';
 import { getMusicianProfile } from '../api/users';
+import { listUserGroups } from '../api/groups';
+import { contactMatch, contactProfile } from '../api/messaging';
 import type { Match } from '../types/match';
 
 type MainTab = 'matches' | 'profiles';
@@ -28,6 +30,12 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
   const [matchesLoading, setMatchesLoading] = useState(isAuthenticated);
   const [error, setError] = useState<string | null>(null);
   const [matchesError, setMatchesError] = useState<string | null>(null);
+  const [contactingMatchId, setContactingMatchId] = useState<string | null>(null);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactedMatchIds, setContactedMatchIds] = useState<string[]>([]);
+  const [ownMusicianId, setOwnMusicianId] = useState<string | null>(null);
+  const [ownGroupIds, setOwnGroupIds] = useState<string[]>([]);
+  const [hasMusicianProfile, setHasMusicianProfile] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -48,16 +56,22 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
     if (!isAuthenticated) {
       setMatchesLoading(false);
       setMatches([]);
+      setOwnMusicianId(null);
+      setOwnGroupIds([]);
+      setHasMusicianProfile(false);
       return;
     }
 
     const loadMatches = async () => {
       try {
         const profile = await getMusicianProfile();
+        setHasMusicianProfile(true);
+        setOwnMusicianId(profile.id);
         setMatches(await getMatches(profile.id));
         setMatchesError(null);
       } catch (cause: unknown) {
         if (cause instanceof ApiError && cause.status === 404) {
+          setHasMusicianProfile(false);
           setMatchesError('Créez votre profil musicien pour recevoir des matchs.');
         } else {
           setMatchesError(cause instanceof Error ? cause.message : 'Impossible de charger vos matchs.');
@@ -67,6 +81,7 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
       }
     };
     void loadMatches();
+    void listUserGroups().then((ownedGroups) => setOwnGroupIds(ownedGroups.map((group) => group.id))).catch(() => setOwnGroupIds([]));
   }, [isAuthenticated]);
 
   const cities = useMemo(() => [...new Set([...groups.map((group) => group.city), ...musicians.map((musician) => musician.city)])].sort(), [groups, musicians]);
@@ -76,28 +91,61 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
   const musicianStyles = useMemo(() => [...new Set(musicians.flatMap((musician) => musician.styles))].sort(), [musicians]);
 
   const filteredGroups = useMemo(() => groups
-    .filter((group) => (!cityFilter || group.city === cityFilter)
+    .filter((group) => !ownGroupIds.includes(group.id)
+      && (!cityFilter || group.city === cityFilter)
       && (!statusFilter || group.status === statusFilter)
       && (!instrumentFilter || group.requestedInstruments.some((item) => item.instrument === instrumentFilter))
       && (!styleFilter || group.styles.includes(styleFilter)))
     .sort((a, b) => profileSort === 'newest'
       ? b.createdAt.localeCompare(a.createdAt)
-      : a.createdAt.localeCompare(b.createdAt)), [groups, cityFilter, statusFilter, instrumentFilter, styleFilter, profileSort]);
+      : a.createdAt.localeCompare(b.createdAt)), [groups, ownGroupIds, cityFilter, statusFilter, instrumentFilter, styleFilter, profileSort]);
 
   const filteredMusicians = useMemo(() => musicians
-    .filter((musician) => (!cityFilter || musician.city === cityFilter)
+    .filter((musician) => musician.id !== ownMusicianId
+      && (!cityFilter || musician.city === cityFilter)
       && (!statusFilter || musician.status === statusFilter)
       && (!instrumentFilter || musician.instruments.some((item) => item.instrument === instrumentFilter))
       && (!styleFilter || musician.styles.includes(styleFilter)))
     .sort((a, b) => profileSort === 'newest'
       ? b.createdAt.localeCompare(a.createdAt)
-      : a.createdAt.localeCompare(b.createdAt)), [musicians, cityFilter, statusFilter, instrumentFilter, styleFilter, profileSort]);
+      : a.createdAt.localeCompare(b.createdAt)), [musicians, ownMusicianId, cityFilter, statusFilter, instrumentFilter, styleFilter, profileSort]);
 
   const resetFilters = () => {
     setCityFilter('');
     setStatusFilter('');
     setInstrumentFilter('');
     setStyleFilter('');
+  };
+
+  async function contactProfileAction(type: 'musician' | 'group', profileId: string) {
+    if (!isAuthenticated || !hasMusicianProfile) return;
+    setContactError(null);
+    try {
+      const result = await contactProfile(type, profileId);
+      openConversation(result.conversationId);
+    } catch (cause: unknown) {
+      setContactError(cause instanceof ApiError ? cause.message : 'Impossible de prendre contact avec ce profil.');
+    }
+  }
+
+  const contact = async (match: Match) => {
+    setContactingMatchId(match.id);
+    setContactError(null);
+    try {
+      const result = await contactMatch(match.id);
+      setContactedMatchIds((current) => [...current, match.id]);
+      setMatches((current) => current.map((item) => item.id === match.id ? { ...item, statut: 'CONTACTE' } : item));
+      openConversation(result.conversationId);
+    } catch (cause: unknown) {
+      setContactError(cause instanceof ApiError ? cause.message : 'Impossible de prendre contact.');
+    } finally {
+      setContactingMatchId(null);
+    }
+  };
+
+  const openConversation = (conversationId: string) => {
+    window.history.pushState({}, '', `/messages?conversation=${encodeURIComponent(conversationId)}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   return (
@@ -120,9 +168,14 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
               <div><h2>Vos matchs</h2><p className="form-hint">Les compatibilités calculées à partir de votre profil musicien.</p></div>
               {isAuthenticated && !matchesLoading && !matchesError && <strong>{matches.length} match{matches.length > 1 ? 's' : ''}</strong>}
             </div>
-            {!isAuthenticated && <p className="form-hint">Connectez-vous pour consulter vos matchs personnalisés.</p>}
+            {!isAuthenticated && (
+              <div className="locked-matches" role="status">
+                <div className="locked-match-card"><strong>Connectez-vous pour accéder à vos matchs !</strong></div>
+              </div>
+            )}
             {matchesLoading && <p className="form-hint">Chargement de vos matchs…</p>}
             {matchesError && <p className="form-notice error" role="alert">{matchesError}</p>}
+            {contactError && <p className="form-notice error" role="alert">{contactError}</p>}
             {!matchesLoading && !matchesError && isAuthenticated && matches.length === 0 && <p className="form-hint">Aucun match pour le moment.</p>}
             {!matchesLoading && !matchesError && matches.length > 0 && (
               <div className="match-discovery-grid">
@@ -136,6 +189,9 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
                       <span className="tag">Style {Math.round(match.sousScores.style)} %</span>
                       <span className="tag">Zone {Math.round(match.sousScores.zone)} %</span>
                     </div>
+                    {match.statut === 'CONTACTE' || contactedMatchIds.includes(match.id)
+                      ? <p className="form-notice">Contact créé. Retrouvez la conversation dans Messagerie.</p>
+                      : <button type="button" className="button button-primary" disabled={contactingMatchId === match.id} onClick={() => void contact(match)}>{contactingMatchId === match.id ? 'Contact…' : 'Prendre contact'}</button>}
                   </article>
                 ))}
               </div>
@@ -166,7 +222,7 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
                       <label>Style<select value={styleFilter} onChange={(event) => setStyleFilter(event.target.value)}><option value="">Tous les styles</option>{(activeProfileTab === 'groups' ? groupStyles : musicianStyles).map((style) => <option value={style} key={style}>{style}</option>)}</select></label>
                       <button type="button" className="button button-secondary" onClick={resetFilters}>Réinitialiser</button>
                     </div>
-                    {activeProfileTab === 'groups' ? <ProfileGroups groups={filteredGroups} /> : <ProfileMusicians musicians={filteredMusicians} />}
+                    {activeProfileTab === 'groups' ? <ProfileGroups groups={filteredGroups} isAuthenticated={isAuthenticated} hasMusicianProfile={hasMusicianProfile} onContact={contactProfileAction} /> : <ProfileMusicians musicians={filteredMusicians} isAuthenticated={isAuthenticated} hasMusicianProfile={hasMusicianProfile} onContact={contactProfileAction} />}
                   </>
             )}
           </div>
@@ -177,12 +233,12 @@ export function DiscoverPage({ isAuthenticated }: DiscoverPageProps) {
   );
 }
 
-function ProfileGroups({ groups }: { groups: PublicGroupProfile[] }) {
+function ProfileGroups({ groups, isAuthenticated, hasMusicianProfile, onContact }: { groups: PublicGroupProfile[]; isAuthenticated: boolean; hasMusicianProfile: boolean; onContact: (type: 'musician' | 'group', id: string) => Promise<void> }) {
   if (!groups.length) return <p className="form-hint">Aucun groupe public n’est disponible.</p>;
-  return <div className="public-profile-grid">{groups.map((group) => <article className="public-profile-card" key={group.id}><span className="eyebrow">Groupe · {group.city}</span><h3>{group.name}</h3><p>{group.description || 'Aucune présentation renseignée.'}</p><div className="tag-list">{group.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div><strong>Postes ouverts</strong><p>{group.requestedInstruments.map((item) => `${item.instrument} (${item.niveau})`).join(' · ') || 'Aucun poste ouvert'}</p></article>)}</div>;
+  return <div className="public-profile-grid">{groups.map((group) => <article className="public-profile-card" key={group.id}><span className="eyebrow">Groupe · {group.city}</span><h3>{group.name}</h3><p>{group.description || 'Aucune présentation renseignée.'}</p><div className="tag-list">{group.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div><strong>Postes ouverts</strong><p>{group.requestedInstruments.map((item) => `${item.instrument} (${item.niveau})`).join(' · ') || 'Aucun poste ouvert'}</p>{!isAuthenticated ? <p className="login-contact-prompt">Connectez-vous pour pouvoir prendre contact</p> : !hasMusicianProfile ? <p className="login-contact-prompt">Remplissez votre profil musicien pour pouvoir prendre contact !</p> : <button type="button" className="button button-primary" onClick={() => void onContact('group', group.id)}>Prendre contact</button>}</article>)}</div>;
 }
 
-function ProfileMusicians({ musicians }: { musicians: PublicMusicianProfile[] }) {
+function ProfileMusicians({ musicians, isAuthenticated, hasMusicianProfile, onContact }: { musicians: PublicMusicianProfile[]; isAuthenticated: boolean; hasMusicianProfile: boolean; onContact: (type: 'musician' | 'group', id: string) => Promise<void> }) {
   if (!musicians.length) return <p className="form-hint">Aucun musicien public n’est disponible.</p>;
-  return <div className="public-profile-grid">{musicians.map((musician) => <article className="public-profile-card" key={musician.id}><span className="eyebrow">Musicien · {musician.city}</span><h3>{musician.musicianName || 'Musicien'}</h3><p>{musician.bio || 'Aucune présentation renseignée.'}</p><div className="tag-list">{musician.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div><strong>Instruments</strong><p>{musician.instruments.map((item) => `${item.instrument} (${item.niveau})`).join(' · ') || 'Non renseigné'}</p></article>)}</div>;
+  return <div className="public-profile-grid">{musicians.map((musician) => <article className="public-profile-card" key={musician.id}><span className="eyebrow">Musicien · {musician.city}</span><h3>{musician.musicianName || 'Musicien'}</h3><p>{musician.bio || 'Aucune présentation renseignée.'}</p><div className="tag-list">{musician.styles.map((style) => <span className="tag" key={style}>{style}</span>)}</div><strong>Instruments</strong><p>{musician.instruments.map((item) => `${item.instrument} (${item.niveau})`).join(' · ') || 'Non renseigné'}</p>{!isAuthenticated ? <p className="login-contact-prompt">Connectez-vous pour pouvoir prendre contact</p> : !hasMusicianProfile ? <p className="login-contact-prompt">Remplissez votre profil musicien pour pouvoir prendre contact !</p> : <button type="button" className="button button-primary" onClick={() => void onContact('musician', musician.id)}>Prendre contact</button>}</article>)}</div>;
 }

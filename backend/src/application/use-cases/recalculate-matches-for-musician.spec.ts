@@ -86,6 +86,6 @@ describe('RecalculateMatchesForMusician', () => {
     const useCase = new RecalculateMatchesForMusician(musicianRepo, positionRepo, matchRepo);
     await useCase.execute('musician-1');
 
-    expect(positionRepo.findOpenPositionsNearZone).toHaveBeenCalledWith(musician.zone);
+    expect(positionRepo.findOpenPositionsNearZone).toHaveBeenCalledWith(musician.zone, musician.id);
   });
 });
