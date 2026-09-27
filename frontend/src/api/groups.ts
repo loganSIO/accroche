@@ -14,6 +14,13 @@ export interface OpenPosition {
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
 }
 
+export interface ManagedOpenPosition {
+  id: string;
+  instrument: string;
+  niveau: PositionLevel;
+  statut: 'ouvert' | 'pourvu' | 'annule';
+}
+
 export interface UserGroup {
   id: string;
   name: string;
@@ -47,4 +54,18 @@ export const createOpenPosition = (groupId: string, input: CreateOpenPositionInp
   request<OpenPosition>(`/groups/${groupId}/positions`, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+
+export const listGroupPositions = (groupId: string) =>
+  request<ManagedOpenPosition[]>(`/users/me/groups/${groupId}/positions`);
+
+export const updateGroupPosition = (groupId: string, positionId: string, input: Partial<CreateOpenPositionInput>) =>
+  request<ManagedOpenPosition>(`/users/me/groups/${groupId}/positions/${positionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+
+export const deleteGroupPosition = (groupId: string, positionId: string) =>
+  request<{ success: boolean }>(`/users/me/groups/${groupId}/positions/${positionId}`, {
+    method: 'DELETE',
   });

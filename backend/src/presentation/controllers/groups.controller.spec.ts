@@ -68,7 +68,11 @@ describe('GroupsController.createPosition (intégration réelle avec Postgres)',
       data: { userId: user.id, zoneId: zone.id, name: 'Les Accords', styles: ['rock'], status: 'ASSOCIATION' },
     });
 
-    const result = await controller.createPosition(group.id, { instrument: 'basse', niveau: 'intermediaire' });
+    const result = await controller.createPosition(
+      { user: { userId: user.id } } as never,
+      group.id,
+      { instrument: 'basse', niveau: 'intermediaire' },
+    );
 
     expect(result.meta.version).toBe('v1');
     expect(result.data.instrumentRecherche).toBe('basse');
@@ -81,7 +85,11 @@ describe('GroupsController.createPosition (intégration réelle avec Postgres)',
 
   it("lève une 404 si le groupe n'existe pas", async () => {
     await expect(
-      controller.createPosition('id-inexistant', { instrument: 'basse', niveau: 'intermediaire' }),
+      controller.createPosition(
+        { user: { userId: 'user-inexistant' } } as never,
+        'id-inexistant',
+        { instrument: 'basse', niveau: 'intermediaire' },
+      ),
     ).rejects.toThrow('Groupe id-inexistant introuvable.');
   });
 
@@ -109,7 +117,11 @@ describe('GroupsController.createPosition (intégration réelle avec Postgres)',
     data: { userId: groupUser.id, zoneId: zone.id, name: 'Les Accords', styles: ['rock'], status: 'ASSOCIATION' },
   });
 
-  await controller.createPosition(group.id, { instrument: 'basse', niveau: 'intermediaire' });
+  await controller.createPosition(
+    { user: { userId: groupUser.id } } as never,
+    group.id,
+    { instrument: 'basse', niveau: 'intermediaire' },
+  );
 
   const matches = await prisma.match.findMany();
   expect(matches).toHaveLength(1);

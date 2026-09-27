@@ -3,6 +3,7 @@ import { GroupPrismaRepository } from '../../infrastructure/repositories/group-p
 import { OpenPositionPrismaRepository } from '../../infrastructure/repositories/open-position-prisma.repository.js';
 import { MusicianPrismaRepository } from '../../infrastructure/repositories/musician-prisma.repository.js';
 import { MatchPrismaRepository } from '../../infrastructure/repositories/match-prisma.repository.js';
+import { PublicProfilePrismaRepository } from '../../infrastructure/repositories/public-profile-prisma.repository.js';
 import { CreateOpenPositionForGroup, GroupNotFoundError } from '../../application/use-cases/open-position-for-group.js';
 import { RecalculateMatchesForMusician } from '../../application/use-cases/recalculate-matches-for-musician.js';
 import { RecalculateMatchesForNewPosition } from '../../application/use-cases/recalculate-matches-for-new-position.js';
@@ -13,6 +14,7 @@ import { AccessTokenGuard, type AuthenticatedRequest } from '../guards/access-to
 @Controller('api/v1/groups')
 export class GroupsController {
   private readonly groupRepository = new GroupPrismaRepository();
+  private readonly publicProfiles = new PublicProfilePrismaRepository();
   private readonly createOpenPositionForGroup = new CreateOpenPositionForGroup(
     new OpenPositionPrismaRepository(),
     new GroupPrismaRepository(),
@@ -29,7 +31,7 @@ export class GroupsController {
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    const group = await this.groupRepository.findById(id);
+    const group = await this.publicProfiles.findGroupById(id);
     if (!group) {
       throw new NotFoundException(`Groupe ${id} introuvable.`);
     }
@@ -67,8 +69,16 @@ export class GroupsController {
   }
 
   @Post(':groupId/positions')
-  async createPosition(@Param('groupId') groupId: string, @Body() dto: CreateOpenPositionDto) {
+  @UseGuards(AccessTokenGuard)
+  async createPosition(
+    @Req() request: AuthenticatedRequest,
+    @Param('groupId') groupId: string,
+    @Body() dto: CreateOpenPositionDto,
+  ) {
     try {
+      if (!(await this.groupRepository.belongsToUser(groupId, request.user.userId))) {
+        throw new GroupNotFoundError(groupId);
+      }
       const position = await this.createOpenPositionForGroup.execute({
         groupProfileId: groupId,
         instrumentRecherche: dto.instrument,

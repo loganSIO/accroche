@@ -24,6 +24,7 @@ describe('CreateGroupProfile', () => {
     const createdProfile = { id: 'group-1' } as GroupCandidate;
     const repository: GroupRepository = {
       findById: vi.fn(),
+      belongsToUser: vi.fn(),
       create: vi.fn().mockResolvedValue(createdProfile),
     };
     const passwordHasher: PasswordHasher = {
@@ -42,6 +43,7 @@ describe('CreateGroupProfile', () => {
   it('ne transmet jamais le mot de passe en clair au repository', async () => {
     const repository: GroupRepository = {
       findById: vi.fn(),
+      belongsToUser: vi.fn(),
       create: vi.fn().mockResolvedValue({} as GroupCandidate),
     };
     const passwordHasher: PasswordHasher = {

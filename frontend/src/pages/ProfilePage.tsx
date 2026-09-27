@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { CityField } from '../components/profile/CityField';
 import { ApiError } from '../api/client';
 import { createMusicianProfile, getMusicianProfile, updateMusicianProfile, type GroupStatus, type MusicianObjective, type PositionLevel } from '../api/users';
-import { listUserGroups, type UserGroup } from '../api/groups';
+import {
+  deleteUserGroup,
+  listGroupPositions,
+  listUserGroups,
+  updateGroupPosition,
+  updateUserGroup,
+  type ManagedOpenPosition,
+  type UserGroup,
+} from '../api/groups';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -33,32 +41,99 @@ export function ProfilePage() {
   const [bio, setBio] = useState('');
   const [groups, setGroups] = useState<GroupMembershipDraft[]>([]);
   const [publishedGroups, setPublishedGroups] = useState<UserGroup[]>([]);
+  const [publishedPositions, setPublishedPositions] = useState<Record<string, ManagedOpenPosition[]>>({});
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+  const [requestDraft, setRequestDraft] = useState<UserGroup | null>(null);
+  const [requestPositions, setRequestPositions] = useState<ManagedOpenPosition[]>([]);
+  const [requestBusy, setRequestBusy] = useState(false);
   const [activeGroupTab, setActiveGroupTab] = useState<'showcase' | 'requests'>('showcase');
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void Promise.all([
-      getMusicianProfile().catch((reason: unknown) => {
-      if (reason instanceof ApiError && reason.status === 404) return null;
-      throw reason;
-      }),
-      listUserGroups(),
-    ]).then(([profile, requests]) => {
-      if (profile) {
-        setMusicianName(profile.musicianName);
-        setCity(profile.zone.ville);
-        setSelectedInstruments(profile.instruments.map((item) => item.instrument));
-        setInstrumentLevels(Object.fromEntries(profile.instruments.map((item) => [item.instrument, item.niveau])));
-        setSelectedStyles(profile.styles);
-        setBio(profile.bio ?? '');
-        setGroups(profile.showcaseGroups ?? []);
+    const load = async () => {
+      try {
+        const [profile, requests] = await Promise.all([
+          getMusicianProfile().catch((reason: unknown) => {
+            if (reason instanceof ApiError && reason.status === 404) return null;
+            throw reason;
+          }),
+          listUserGroups(),
+        ]);
+        if (profile) {
+          setMusicianName(profile.musicianName);
+          setCity(profile.zone.ville);
+          setSelectedInstruments(profile.instruments.map((item) => item.instrument));
+          setInstrumentLevels(Object.fromEntries(profile.instruments.map((item) => [item.instrument, item.niveau])));
+          setSelectedStyles(profile.styles);
+          setBio(profile.bio ?? '');
+          setGroups(profile.showcaseGroups ?? []);
+        }
+        setPublishedGroups(requests);
+        const positions = await Promise.all(requests.map(async (group) => [group.id, await listGroupPositions(group.id)] as const));
+        setPublishedPositions(Object.fromEntries(positions));
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : 'Impossible de charger le profil.');
+      } finally {
+        setLoading(false);
       }
-      setPublishedGroups(requests);
-    }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Impossible de charger le profil.'))
-      .finally(() => setLoading(false));
+    };
+    void load();
   }, []);
+
+  const reloadPublishedGroups = async () => {
+    const requests = await listUserGroups();
+    setPublishedGroups(requests);
+    const positions = await Promise.all(requests.map(async (group) => [group.id, await listGroupPositions(group.id)] as const));
+    setPublishedPositions(Object.fromEntries(positions));
+  };
+
+  const startEditingRequest = (group: UserGroup) => {
+    setEditingRequestId(group.id);
+    setRequestDraft({ ...group });
+    setRequestPositions((publishedPositions[group.id] ?? []).map((position) => ({ ...position })));
+  };
+
+  const saveRequest = async () => {
+    if (!requestDraft || !editingRequestId) return;
+    setRequestBusy(true);
+    setError('');
+    try {
+      await updateUserGroup(editingRequestId, {
+        name: requestDraft.name,
+        styles: requestDraft.styles,
+        status: requestDraft.status,
+        description: requestDraft.description,
+        zone: requestDraft.zone,
+      });
+      await Promise.all(requestPositions.map((position) => updateGroupPosition(editingRequestId, position.id, {
+        instrument: position.instrument,
+        niveau: position.niveau,
+      })));
+      await reloadPublishedGroups();
+      setEditingRequestId(null);
+      setRequestDraft(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de modifier la demande.');
+    } finally {
+      setRequestBusy(false);
+    }
+  };
+
+  const removeRequest = async (groupId: string) => {
+    if (!window.confirm('Supprimer cette demande et ses postes ?')) return;
+    setRequestBusy(true);
+    setError('');
+    try {
+      await deleteUserGroup(groupId);
+      await reloadPublishedGroups();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Impossible de supprimer la demande.');
+    } finally {
+      setRequestBusy(false);
+    }
+  };
 
   const addGroup = () => setGroups((current) => [...current, {
     name: '',
@@ -179,12 +254,31 @@ export function ProfilePage() {
           </>}
           {activeGroupTab === 'requests' && <>
             {publishedGroups.length === 0 && <p className="form-hint">Vous n'avez pas encore publié de demande.</p>}
-            {publishedGroups.map((group) => <div className="group-profile" key={group.id}>
-              <div className="group-heading"><h3>{group.name}</h3><span className="group-status">{group.status === 'professionnel' ? 'Professionnel' : 'Association'}</span></div>
-              <p className="form-hint">{group.zone.ville} · {group.description || 'Aucune description'}</p>
-              <strong>Postes recherchés</strong>
-              <ul>{group.requestedInstruments.map((position) => <li key={`${position.instrument}-${position.niveau}`}>{position.instrument} — {levels.find((level) => level.value === position.niveau)?.label ?? position.niveau}</li>)}</ul>
-            </div>)}
+            {publishedGroups.map((group) => {
+              const isEditing = editingRequestId === group.id && requestDraft;
+              const positions = isEditing ? requestPositions : (publishedPositions[group.id] ?? []);
+              return <div className="group-profile" key={group.id}>
+                {isEditing ? <>
+                  <div className="group-heading"><h3>Modifier la demande</h3></div>
+                  <label>Nom du groupe<input value={requestDraft.name} onChange={(event) => setRequestDraft({ ...requestDraft, name: event.target.value })} /></label>
+                  <label>Ville<input value={requestDraft.zone.ville} onChange={(event) => setRequestDraft({ ...requestDraft, zone: { ...requestDraft.zone, ville: event.target.value } })} /></label>
+                  <label>Description<textarea value={requestDraft.description ?? ''} onChange={(event) => setRequestDraft({ ...requestDraft, description: event.target.value })} /></label>
+                  <label>Statut<select value={requestDraft.status} onChange={(event) => setRequestDraft({ ...requestDraft, status: event.target.value as GroupStatus })}><option value="association">Association</option><option value="professionnel">Professionnel</option></select></label>
+                  <strong>Postes recherchés</strong>
+                  {positions.map((position, index) => <div className="position-row" key={position.id}>
+                    <input value={position.instrument} onChange={(event) => setRequestPositions((current) => current.map((item, positionIndex) => positionIndex === index ? { ...item, instrument: event.target.value } : item))} />
+                    <select value={position.niveau} onChange={(event) => setRequestPositions((current) => current.map((item, positionIndex) => positionIndex === index ? { ...item, niveau: event.target.value as PositionLevel } : item))}>{levels.map((level) => <option value={level.value} key={level.value}>{level.label}</option>)}</select>
+                  </div>)}
+                  <div className="request-actions"><button className="button button-secondary" type="button" disabled={requestBusy} onClick={() => setEditingRequestId(null)}>Annuler</button><button className="button button-primary" type="button" disabled={requestBusy} onClick={saveRequest}>Enregistrer</button></div>
+                </> : <>
+                  <div className="group-heading"><h3>{group.name}</h3><span className="group-status">{group.status === 'professionnel' ? 'Professionnel' : 'Association'}</span></div>
+                  <p className="form-hint">{group.zone.ville} · {group.description || 'Aucune description'}</p>
+                  <strong>Postes recherchés</strong>
+                  <ul>{positions.map((position) => <li key={position.id}>{position.instrument} — {levels.find((level) => level.value === position.niveau)?.label ?? position.niveau} ({position.statut})</li>)}</ul>
+                  <div className="request-actions"><button className="button button-secondary" type="button" disabled={requestBusy} onClick={() => startEditingRequest(group)}>Modifier</button><button className="remove-group" type="button" disabled={requestBusy} onClick={() => removeRequest(group.id)}>Supprimer la demande</button></div>
+                </>}
+              </div>;
+            })}
           </>}
         </fieldset>
         <button className="button button-primary" type="submit">Enregistrer ma vitrine</button>

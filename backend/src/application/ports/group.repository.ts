@@ -24,5 +24,6 @@ export interface GroupCandidate {
 
 export interface GroupRepository {
   findById(id: string): Promise<GroupCandidate | null>;
+  belongsToUser(id: string, userId: string): Promise<boolean>;
   create(input: CreateGroupInput): Promise<GroupCandidate>;
 }

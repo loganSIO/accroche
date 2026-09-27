@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { MatchPrismaRepository } from '../../infrastructure/repositories/match-prisma.repository.js';
 import { MusicianPrismaRepository } from '../../infrastructure/repositories/musician-prisma.repository.js';
+import { PublicProfilePrismaRepository } from '../../infrastructure/repositories/public-profile-prisma.repository.js';
 import type { MatchResponseDto } from '../dtos/match-response.dto.js';
 
 // Couche Présentation : traduit les requêtes HTTP vers l'infrastructure.
@@ -12,10 +13,11 @@ import type { MatchResponseDto } from '../dtos/match-response.dto.js';
 export class MusiciansController {
   private readonly matchRepository = new MatchPrismaRepository();
   private readonly musicianRepository = new MusicianPrismaRepository();
+  private readonly publicProfiles = new PublicProfilePrismaRepository();
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    const musician = await this.musicianRepository.findById(id);
+    const musician = await this.publicProfiles.findMusicianById(id);
 
     if (!musician) {
       throw new NotFoundException(`Musicien ${id} introuvable.`);

@@ -7,6 +7,18 @@ export interface CreateOpenPositionForGroupInput {
   niveauAttendu: NiveauMusicien;
 }
 
+export interface ManagedOpenPosition {
+  id: string;
+  instrument: string;
+  niveau: NiveauMusicien;
+  statut: 'ouvert' | 'pourvu' | 'annule';
+}
+
+export interface UpdateOpenPositionForGroupInput {
+  instrumentRecherche?: string;
+  niveauAttendu?: NiveauMusicien;
+}
+
 export interface OpenPositionRepository {
   // Postes ouverts dont la zone recoupe potentiellement celle du musicien.
   // Le filtrage géographique précis reste un détail d'implémentation
@@ -20,4 +32,12 @@ export interface OpenPositionRepository {
   // poste rattaché à un FoundingProfile. Cf. décision produit : une
   // méthode/route séparée gérera les postes de type FOUNDING plus tard.
   createForGroup(input: CreateOpenPositionForGroupInput): Promise<OpenPositionCandidate>;
+  findByGroupForUser(groupProfileId: string, userId: string): Promise<ManagedOpenPosition[]>;
+  updateForGroupUser(
+    groupProfileId: string,
+    positionId: string,
+    userId: string,
+    input: UpdateOpenPositionForGroupInput,
+  ): Promise<ManagedOpenPosition | null>;
+  deleteForGroupUser(groupProfileId: string, positionId: string, userId: string): Promise<boolean>;
 }

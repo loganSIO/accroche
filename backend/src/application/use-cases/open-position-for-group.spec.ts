@@ -12,9 +12,13 @@ describe('CreateOpenPositionForGroup', () => {
     const openPositionRepository: OpenPositionRepository = {
       findOpenPositionsNearZone: vi.fn(),
       createForGroup: vi.fn().mockResolvedValue(createdPosition),
+      findByGroupForUser: vi.fn(),
+      updateForGroupUser: vi.fn(),
+      deleteForGroupUser: vi.fn(),
     };
     const groupRepository: GroupRepository = {
       findById: vi.fn().mockResolvedValue(existingGroup),
+      belongsToUser: vi.fn(),
       create: vi.fn(),
     };
 
@@ -38,9 +42,13 @@ describe('CreateOpenPositionForGroup', () => {
     const openPositionRepository: OpenPositionRepository = {
       findOpenPositionsNearZone: vi.fn(),
       createForGroup: vi.fn(),
+      findByGroupForUser: vi.fn(),
+      updateForGroupUser: vi.fn(),
+      deleteForGroupUser: vi.fn(),
     };
     const groupRepository: GroupRepository = {
       findById: vi.fn().mockResolvedValue(null),
+      belongsToUser: vi.fn(),
       create: vi.fn(),
     };
 
