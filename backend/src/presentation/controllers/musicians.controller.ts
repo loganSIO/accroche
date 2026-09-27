@@ -34,6 +34,7 @@ export class MusiciansController {
     const matches = await this.matchRepository.findByMusicianId(id);
     return {
       data: matches.map((m) => ({
+        id: m.id,
         positionId: m.positionId,
         scoreGlobal: m.scoreGlobal,
         sousScores: m.sousScores,

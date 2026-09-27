@@ -21,7 +21,7 @@ export class RecalculateMatchesForMusician {
       return;
     }
 
-    const positions = await this.openPositionRepository.findOpenPositionsNearZone(musician.zone);
+    const positions = await this.openPositionRepository.findOpenPositionsNearZone(musician.zone, musician.id);
 
     for (const position of positions) {
       const result = calculateMatch(musician, position);

@@ -42,7 +42,7 @@ function App() {
       <main className="page-content">
         {route === '/' && <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />}
         {route === '/discover' && <DiscoverPage isAuthenticated={auth.isAuthenticated} />}
-        {route === '/messages' && <MessagingPage />}
+        {route === '/messages' && <MessagingPage isAuthenticated={auth.isAuthenticated} />}
         {route === '/profile' && (auth.isAuthenticated ? <ProfilePage /> : <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />)}
         {route === '/group-request' && (auth.isAuthenticated ? <GroupRequestPage onNavigate={navigate} /> : <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />)}
       </main>

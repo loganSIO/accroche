@@ -14,6 +14,7 @@ import { AccessTokenGuard } from './presentation/guards/access-token.guard.js';
 import { MusicianProfileController } from './presentation/controllers/musician-profile.controller.js';
 import { UserGroupsController } from './presentation/controllers/user-groups.controller.js';
 import { PublicProfilesController } from './presentation/controllers/public-profiles.controller.js';
+import { MessagingController } from './presentation/controllers/messaging.controller.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PublicProfilesController } from './presentation/controllers/public-prof
     MusicianProfileController,
     UserGroupsController,
     PublicProfilesController,
+    MessagingController,
   ],
   providers: [AppService, AccessTokenGuard],
 })

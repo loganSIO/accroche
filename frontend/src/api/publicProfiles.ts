@@ -39,3 +39,5 @@ export interface PublicProfiles {
 }
 
 export const listPublicProfiles = () => request<PublicProfiles>('/profiles/public');
+export const getPublicMusician = (id: string) => request<PublicMusicianProfile>(`/profiles/public/musicians/${encodeURIComponent(id)}`);
+export const getPublicGroup = (id: string) => request<PublicGroupProfile>(`/profiles/public/groups/${encodeURIComponent(id)}`);
