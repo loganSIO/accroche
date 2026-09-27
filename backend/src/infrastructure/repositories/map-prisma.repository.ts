@@ -30,10 +30,14 @@ export class MapPrismaRepository implements MapRepository {
 
     return Array.from(clustersByVille.entries()).map(([ville, agg]) => ({
       ville,
-      latitude: agg.latSum / agg.count,
-      longitude: agg.lngSum / agg.count,
+      latitude: roundCoordinate(agg.latSum / agg.count),
+      longitude: roundCoordinate(agg.lngSum / agg.count),
       musicianCount: agg.musicianCount,
       groupCount: agg.groupCount,
     }));
   }
+}
+
+function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100;
 }

@@ -52,8 +52,8 @@ describe('MapController (intégration réelle avec Postgres)', () => {
     expect(result.data[0].musicianCount).toBe(1);
     expect(result.data[0].groupCount).toBe(1);
     // Le centroïde doit être la moyenne des deux zones, jamais l'une ou l'autre exactement.
-    expect(result.data[0].latitude).toBeCloseTo((48.58 + 48.56) / 2, 5);
-    expect(result.data[0].longitude).toBeCloseTo((7.75 + 7.76) / 2, 5);
+    expect(result.data[0].latitude).toBe(48.57);
+    expect(result.data[0].longitude).toBe(7.76);
     expect(result.data[0].latitude).not.toBe(zoneA.latitude);
     expect(result.data[0].latitude).not.toBe(zoneB.latitude);
   });

@@ -296,7 +296,7 @@ Cet endpoint reçoit un seul poste par appel :
 }
 ```
 
-Les routes suivantes restent à prévoir pour gérer les postes après publication :
+Les routes suivantes sont disponibles pour gérer les postes après publication :
 
 ```text
 GET    /api/v1/users/me/groups/:groupId/positions
@@ -304,8 +304,10 @@ PATCH  /api/v1/groups/:groupId/positions/:positionId
 DELETE /api/v1/groups/:groupId/positions/:positionId
 ```
 
-Les règles métier doivent vérifier que l'utilisateur connecté administre bien
-le groupe ciblé.
+Ces routes sont protégées par authentification et vérifient que l'utilisateur
+connecté administre bien le groupe ciblé. La création d'un poste sur un groupe
+existant applique la même vérification. Une mise à jour doit fournir au moins
+un des champs `instrument` ou `niveau`.
 
 ## 5. Affichage des demandes publiées
 
@@ -320,11 +322,13 @@ La page profil appelle `GET /api/v1/users/me/groups` et affiche dans l'onglet
 - leurs styles ;
 - les postes et niveaux recherchés.
 
-### Reste à faire
+### État
 
-La lecture est déjà branchée sur `GET /api/v1/users/me/groups`. Il reste à
-ajouter, si nécessaire, des routes de lecture et de modification unitaire des
-postes pour permettre leur gestion après publication.
+La lecture est branchée sur `GET /api/v1/users/me/groups` et retourne les
+postes associés. La route dédiée
+`GET /api/v1/users/me/groups/:groupId/positions` permet également de recharger
+les postes d'un groupe, et les routes `PATCH`/`DELETE` permettent leur gestion
+unitaire après publication.
 
 ## 6. Profils publics et vitrine
 
@@ -347,6 +351,17 @@ GET /api/v1/musicians/:id
 GET /api/v1/groups/:id
 ```
 
+Les routes publiques sont maintenant disponibles :
+
+- `GET /api/v1/profiles/public` retourne les profils musiciens et groupes
+  publiables ;
+- `GET /api/v1/musicians/:id` retourne une fiche musicien publique ;
+- `GET /api/v1/groups/:id` retourne une fiche groupe publique.
+
+Les fiches publiques exposent la ville, mais jamais la latitude, la longitude,
+les identifiants utilisateur, le mot de passe ou les disponibilités détaillées.
+Les postes retournés pour un groupe sont uniquement ses postes ouverts.
+
 Les réponses publiques doivent respecter la confidentialité :
 
 - ne pas exposer le mot de passe ;
@@ -356,8 +371,9 @@ Les réponses publiques doivent respecter la confidentialité :
 - distinguer `MusicianProfile`, `GroupProfile`, `FoundingProfile`,
   `OpenPosition` et `Match`.
 
-La carte doit utiliser les clusters retournés par `GET /api/v1/map`, et non
-publier les coordonnées exactes de chaque profil.
+La carte utilise les clusters retournés par `GET /api/v1/map`, dont le
+centroïde est arrondi à deux décimales, et ne publie pas les coordonnées
+exactes de chaque profil.
 
 ## 7. Matchs, contacts et messagerie
 

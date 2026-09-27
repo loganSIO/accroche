@@ -41,7 +41,7 @@ function App() {
       <Header currentRoute={route} onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} onSignOut={auth.signOut} />
       <main className="page-content">
         {route === '/' && <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />}
-        {route === '/discover' && <DiscoverPage />}
+        {route === '/discover' && <DiscoverPage isAuthenticated={auth.isAuthenticated} />}
         {route === '/messages' && <MessagingPage />}
         {route === '/profile' && (auth.isAuthenticated ? <ProfilePage /> : <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />)}
         {route === '/group-request' && (auth.isAuthenticated ? <GroupRequestPage onNavigate={navigate} /> : <HomePage onNavigate={navigate} onAuth={setAuthMode} isAuthenticated={auth.isAuthenticated} />)}

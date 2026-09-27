@@ -32,7 +32,12 @@ function buildPosition(id: string): OpenPositionCandidate {
 describe('RecalculateMatchesForMusician', () => {
   it("ne fait rien si le musicien n'existe pas", async () => {
     const musicianRepo: MusicianRepository = { findById: vi.fn().mockResolvedValue(null) };
-    const positionRepo: OpenPositionRepository = { findOpenPositionsNearZone: vi.fn() };
+    const positionRepo: OpenPositionRepository = {
+      findOpenPositionsNearZone: vi.fn(),
+      findByGroupForUser: vi.fn(),
+      updateForGroupUser: vi.fn(),
+      deleteForGroupUser: vi.fn(),
+    };
     const matchRepo: MatchRepository = { upsert: vi.fn() };
 
     const useCase = new RecalculateMatchesForMusician(musicianRepo, positionRepo, matchRepo);
@@ -49,6 +54,9 @@ describe('RecalculateMatchesForMusician', () => {
     const musicianRepo: MusicianRepository = { findById: vi.fn().mockResolvedValue(musician) };
     const positionRepo: OpenPositionRepository = {
       findOpenPositionsNearZone: vi.fn().mockResolvedValue(positions),
+      findByGroupForUser: vi.fn(),
+      updateForGroupUser: vi.fn(),
+      deleteForGroupUser: vi.fn(),
     };
     const matchRepo: MatchRepository = { upsert: vi.fn().mockResolvedValue(undefined) };
 
@@ -69,6 +77,9 @@ describe('RecalculateMatchesForMusician', () => {
     const musicianRepo: MusicianRepository = { findById: vi.fn().mockResolvedValue(musician) };
     const positionRepo: OpenPositionRepository = {
       findOpenPositionsNearZone: vi.fn().mockResolvedValue([]),
+      findByGroupForUser: vi.fn(),
+      updateForGroupUser: vi.fn(),
+      deleteForGroupUser: vi.fn(),
     };
     const matchRepo: MatchRepository = { upsert: vi.fn() };
 

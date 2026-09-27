@@ -79,6 +79,11 @@ export class GroupPrismaRepository implements GroupRepository {
     return record ? toGroupCandidate(record) : null;
   }
 
+  async belongsToUser(id: string, userId: string): Promise<boolean> {
+    const group = await prisma.groupProfile.findFirst({ where: { id, userId }, select: { id: true } });
+    return group !== null;
+  }
+
   async create(input: CreateGroupInput): Promise<GroupCandidate> {
     const record = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
