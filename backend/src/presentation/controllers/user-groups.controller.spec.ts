@@ -22,6 +22,7 @@ const input = {
   description: 'Groupe strasbourgeois',
   audioLinks: ['https://example.com/demo.mp3'],
   zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+  requestedInstruments: [{ instrument: 'basse', niveau: 'intermediaire' }],
 };
 
 describe('UserGroupsController et gestion du propriétaire', () => {
@@ -55,6 +56,13 @@ describe('UserGroupsController et gestion du propriétaire', () => {
     expect(created.data.zone.ville).toBe('Strasbourg');
     expect(result.data).toHaveLength(1);
     expect(result.data[0].id).toBe(created.data.id);
+    expect(await prisma.openPosition.count({ where: { groupProfileId: created.data.id } })).toBe(1);
+    expect(await prisma.openPosition.findFirst({ where: { groupProfileId: created.data.id } }))
+      .toMatchObject({
+        ownerType: 'GROUP',
+        instrumentRecherche: 'basse',
+        niveauAttendu: 'intermediaire',
+      });
   });
 
   it('met à jour et supprime uniquement un groupe appartenant à l’utilisateur', async () => {

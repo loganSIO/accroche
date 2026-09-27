@@ -8,6 +8,7 @@ export interface CreateGroupInput {
   description?: string;
   audioLinks: string[];
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
+  requestedInstruments: { instrument: string; niveau: string }[];
 }
 
 export interface GroupCandidate {
@@ -18,6 +19,7 @@ export interface GroupCandidate {
   description: string | null;
   audioLinks: string[];
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
+  requestedInstruments?: { instrument: string; niveau: string }[];
 }
 
 export interface GroupRepository {

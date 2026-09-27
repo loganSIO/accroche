@@ -22,6 +22,7 @@ export interface UserGroup {
   description?: string;
   audioLinks: string[];
   zone: ZoneInput;
+  requestedInstruments: CreateOpenPositionInput[];
 }
 
 export interface CreateUserGroupInput {
@@ -31,6 +32,7 @@ export interface CreateUserGroupInput {
   description?: string;
   audioLinks: string[];
   zone: ZoneInput;
+  requestedInstruments: CreateOpenPositionInput[];
 }
 
 export const listUserGroups = () => request<UserGroup[]>('/users/me/groups');

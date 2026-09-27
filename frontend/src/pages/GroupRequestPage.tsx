@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CityField } from '../components/profile/CityField';
 import type { AppRoute } from '../App';
-import { createOpenPosition, createUserGroup } from '../api/groups';
+import { createUserGroup } from '../api/groups';
 import type { PositionLevel, ZoneInput } from '../api/users';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
@@ -37,10 +37,10 @@ export function GroupRequestPage({ onNavigate }: { onNavigate: (route: AppRoute)
       description,
       audioLinks: [],
       zone,
+      requestedInstruments: positions,
     };
     try {
-      const created = await createUserGroup(group);
-      await Promise.all(positions.map((position) => createOpenPosition(created.id, position)));
+      await createUserGroup(group);
       setSaved(true);
     } catch (error) {
       setSaved(false);

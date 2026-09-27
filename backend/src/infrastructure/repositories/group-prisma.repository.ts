@@ -6,7 +6,7 @@ export class GroupPrismaRepository implements GroupRepository {
   async findByUserId(userId: string): Promise<GroupCandidate[]> {
     const records = await prisma.groupProfile.findMany({
       where: { userId },
-      include: { zone: true },
+      include: { zone: true, positions: { select: { instrumentRecherche: true, niveauAttendu: true } } },
       orderBy: { createdAt: 'asc' },
     });
     return records.map(toGroupCandidate);
@@ -24,8 +24,15 @@ export class GroupPrismaRepository implements GroupRepository {
           status: input.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL',
           description: input.description,
           audioLinks: input.audioLinks,
+          positions: {
+            create: input.requestedInstruments.map((position) => ({
+              ownerType: 'GROUP' as const,
+              instrumentRecherche: position.instrument,
+              niveauAttendu: position.niveau,
+            })),
+          },
         },
-        include: { zone: true },
+        include: { zone: true, positions: { select: { instrumentRecherche: true, niveauAttendu: true } } },
       });
     });
     return toGroupCandidate(record);
@@ -52,7 +59,7 @@ export class GroupPrismaRepository implements GroupRepository {
           ...(input.description !== undefined ? { description: input.description } : {}),
           ...(input.audioLinks !== undefined ? { audioLinks: input.audioLinks } : {}),
         },
-        include: { zone: true },
+        include: { zone: true, positions: { select: { instrumentRecherche: true, niveauAttendu: true } } },
       });
     });
     return toGroupCandidate(record);
@@ -66,7 +73,7 @@ export class GroupPrismaRepository implements GroupRepository {
   async findById(id: string): Promise<GroupCandidate | null> {
     const record = await prisma.groupProfile.findUnique({
       where: { id },
-      include: { zone: true },
+      include: { zone: true, positions: { select: { instrumentRecherche: true, niveauAttendu: true } } },
     });
 
     return record ? toGroupCandidate(record) : null;
@@ -97,7 +104,7 @@ export class GroupPrismaRepository implements GroupRepository {
           description: input.description,
           audioLinks: input.audioLinks,
         },
-        include: { zone: true },
+        include: { zone: true, positions: { select: { instrumentRecherche: true, niveauAttendu: true } } },
       });
     });
 

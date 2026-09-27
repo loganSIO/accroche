@@ -12,6 +12,7 @@ export class MusicianPrismaRepository implements MusicianRepository {
     instruments: true,
     styles: true,
     availabilities: true,
+    showcaseGroups: true,
     zone: true,
   } as const;
 
@@ -37,6 +38,10 @@ export class MusicianPrismaRepository implements MusicianRepository {
           instruments: { create: input.instruments },
           styles: { create: input.styles.map((style) => ({ style })) },
           availabilities: { create: input.availabilities },
+          showcaseGroups: { create: (input.showcaseGroups ?? []).map((group) => ({
+            ...group,
+            status: group.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL',
+          })) },
         },
         include: this.includeRelations,
       });
@@ -63,6 +68,9 @@ export class MusicianPrismaRepository implements MusicianRepository {
       if (input.availabilities !== undefined) {
         await tx.availability.deleteMany({ where: { musicianProfileId: existing.id } });
       }
+      if (input.showcaseGroups !== undefined) {
+        await tx.musicianShowcaseGroup.deleteMany({ where: { musicianProfileId: existing.id } });
+      }
       return tx.musicianProfile.update({
         where: { id: existing.id },
         data: {
@@ -70,10 +78,18 @@ export class MusicianPrismaRepository implements MusicianRepository {
           ...(input.status ? { status: input.status.toUpperCase() as 'AMATEUR' | 'PRO' } : {}),
           ...(input.objective !== undefined ? { objective: input.objective } : {}),
           ...(input.bio !== undefined ? { bio: input.bio } : {}),
-          ...(input.zone ? { zoneId } : {}),
+          ...(input.zone ? { zone: { connect: { id: zoneId } } } : {}),
           ...(input.instruments !== undefined ? { instruments: { create: input.instruments } } : {}),
           ...(input.styles !== undefined ? { styles: { create: input.styles.map((style) => ({ style })) } } : {}),
           ...(input.availabilities !== undefined ? { availabilities: { create: input.availabilities } } : {}),
+          ...(input.showcaseGroups !== undefined ? {
+            showcaseGroups: {
+              create: input.showcaseGroups.map((group) => ({
+                ...group,
+                status: group.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL',
+              })),
+            },
+          } : {}),
         },
         include: this.includeRelations,
       });
@@ -102,6 +118,7 @@ export class MusicianPrismaRepository implements MusicianRepository {
         instruments: true,
         styles: true,
         availabilities: true,
+        showcaseGroups: true,
         zone: true,
       },
     });
@@ -140,12 +157,17 @@ export class MusicianPrismaRepository implements MusicianRepository {
           instruments: { create: input.instruments },
           styles: { create: input.styles.map((style) => ({ style })) },
           availabilities: { create: input.availabilities },
+          showcaseGroups: { create: (input.showcaseGroups ?? []).map((group) => ({
+            ...group,
+            status: group.status.toUpperCase() as 'ASSOCIATION' | 'PROFESSIONNEL',
+          })) },
         },
         include: {
           instruments: true,
           styles: true,
           availabilities: true,
           zone: true,
+          showcaseGroups: true,
         },
       });
     });

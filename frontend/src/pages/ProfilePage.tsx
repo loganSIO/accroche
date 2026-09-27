@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CityField } from '../components/profile/CityField';
 import { ApiError } from '../api/client';
 import { createMusicianProfile, getMusicianProfile, updateMusicianProfile, type GroupStatus, type MusicianObjective, type PositionLevel } from '../api/users';
-import { createUserGroup, deleteUserGroup, listUserGroups, updateUserGroup } from '../api/groups';
+import { listUserGroups, type UserGroup } from '../api/groups';
 
 const instruments = ['Chant', 'Guitare', 'Basse', 'Batterie', 'Clavier', 'Piano', 'Violon', 'Saxophone'];
 const styles = ['Rock', 'Pop', 'Jazz', 'Blues', 'Funk', 'Indie', 'Electro', 'Classique', 'Metal', 'Reggae'];
@@ -32,16 +32,20 @@ export function ProfilePage() {
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [groups, setGroups] = useState<GroupMembershipDraft[]>([]);
-  const initialGroupIds = useRef<string[]>([]);
+  const [publishedGroups, setPublishedGroups] = useState<UserGroup[]>([]);
+  const [activeGroupTab, setActiveGroupTab] = useState<'showcase' | 'requests'>('showcase');
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void Promise.all([getMusicianProfile().catch((reason: unknown) => {
+    void Promise.all([
+      getMusicianProfile().catch((reason: unknown) => {
       if (reason instanceof ApiError && reason.status === 404) return null;
       throw reason;
-    }), listUserGroups()]).then(([profile, remoteGroups]) => {
+      }),
+      listUserGroups(),
+    ]).then(([profile, requests]) => {
       if (profile) {
         setMusicianName(profile.musicianName);
         setCity(profile.zone.ville);
@@ -49,16 +53,9 @@ export function ProfilePage() {
         setInstrumentLevels(Object.fromEntries(profile.instruments.map((item) => [item.instrument, item.niveau])));
         setSelectedStyles(profile.styles);
         setBio(profile.bio ?? '');
+        setGroups(profile.showcaseGroups ?? []);
       }
-      initialGroupIds.current = remoteGroups.map((group) => group.id);
-      setGroups(remoteGroups.map((group) => ({
-        id: group.id,
-        name: group.name,
-        city: group.zone.ville,
-        position: instruments[0],
-        status: group.status,
-        description: group.description ?? '',
-      })));
+      setPublishedGroups(requests);
     }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Impossible de charger le profil.'))
       .finally(() => setLoading(false));
   }, []);
@@ -98,25 +95,9 @@ export function ProfilePage() {
       availabilities: [],
       bio,
       zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 30, ville: city },
+      showcaseGroups: groups,
     };
     try {
-      const groupPayloads = groups.map((group) => ({
-        name: group.name,
-        styles: [],
-        status: group.status,
-        description: group.description || undefined,
-        audioLinks: [],
-        zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 30, ville: group.city },
-      }));
-      const savedGroups = await Promise.all(groupPayloads.map((group, index) => {
-        const groupId = groups[index].id;
-        return groupId ? updateUserGroup(groupId, group) : createUserGroup(group);
-      }));
-      await Promise.all(initialGroupIds.current
-        .filter((groupId) => !groups.some((group) => group.id === groupId))
-        .map(deleteUserGroup));
-      setGroups((current) => current.map((group, index) => ({ ...group, id: savedGroups[index].id })));
-      initialGroupIds.current = savedGroups.map((group) => group.id);
       try {
         await updateMusicianProfile(input);
       } catch (reason) {
@@ -164,8 +145,13 @@ export function ProfilePage() {
         </fieldset>
         <fieldset className="surface-card">
           <legend>Mes groupes</legend>
-          {groups.length === 0 && <p className="form-hint">Vous n'avez pas encore enregistré de groupe.</p>}
-          {groups.map((group, index) => <div className="group-profile" key={index}>
+          <div className="profile-tabs" role="tablist" aria-label="Mes groupes">
+            <button type="button" role="tab" aria-selected={activeGroupTab === 'showcase'} className={activeGroupTab === 'showcase' ? 'profile-tab active' : 'profile-tab'} onClick={() => setActiveGroupTab('showcase')}>Ma vitrine</button>
+            <button type="button" role="tab" aria-selected={activeGroupTab === 'requests'} className={activeGroupTab === 'requests' ? 'profile-tab active' : 'profile-tab'} onClick={() => setActiveGroupTab('requests')}>Mes demandes</button>
+          </div>
+          {activeGroupTab === 'showcase' && <>
+            {groups.length === 0 && <p className="form-hint">Vous n'avez pas encore enregistré de groupe.</p>}
+            {groups.map((group, index) => <div className="group-profile" key={index}>
             <div className="group-heading"><h3>{group.name || `Groupe ${index + 1}`}</h3><button className="remove-group" type="button" onClick={() => setGroups((current) => current.filter((_, groupIndex) => groupIndex !== index))}>Supprimer</button></div>
             <label>Nom du groupe<input value={group.name} required onChange={(event) => setGroups((current) => current.map((item, groupIndex) => groupIndex === index ? { ...item, name: event.target.value } : item))} /></label>
             <div className="form-two-columns">
@@ -188,8 +174,18 @@ export function ProfilePage() {
               <span className="character-counter">{group.description.length}/{MAX_GROUP_DESCRIPTION_LENGTH} caractères</span>
             </label>
             <p className="form-hint">{group.city || 'Ville à renseigner'} · {group.position} · {group.status === 'professionnel' ? 'Professionnel' : 'Association'}</p>
-          </div>)}
-          <button className="button button-secondary" type="button" onClick={addGroup}>+ Ajouter un groupe</button>
+            </div>)}
+            <button className="button button-secondary" type="button" onClick={addGroup}>+ Ajouter un groupe</button>
+          </>}
+          {activeGroupTab === 'requests' && <>
+            {publishedGroups.length === 0 && <p className="form-hint">Vous n'avez pas encore publié de demande.</p>}
+            {publishedGroups.map((group) => <div className="group-profile" key={group.id}>
+              <div className="group-heading"><h3>{group.name}</h3><span className="group-status">{group.status === 'professionnel' ? 'Professionnel' : 'Association'}</span></div>
+              <p className="form-hint">{group.zone.ville} · {group.description || 'Aucune description'}</p>
+              <strong>Postes recherchés</strong>
+              <ul>{group.requestedInstruments.map((position) => <li key={`${position.instrument}-${position.niveau}`}>{position.instrument} — {levels.find((level) => level.value === position.niveau)?.label ?? position.niveau}</li>)}</ul>
+            </div>)}
+          </>}
         </fieldset>
         <button className="button button-primary" type="submit">Enregistrer ma vitrine</button>
         {saved && <p className="form-notice" role="status">Vitrine enregistrée.</p>}

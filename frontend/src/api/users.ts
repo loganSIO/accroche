@@ -21,6 +21,14 @@ export interface RegisterGroupInput {
 
 export interface ZoneInput { latitude: number; longitude: number; rayonKm: number; ville: string; }
 
+export interface MusicianShowcaseGroup {
+  name: string;
+  city: string;
+  position: string;
+  status: GroupStatus;
+  description: string;
+}
+
 export interface RegisterAccountInput {
   email: string;
   password: string;
@@ -54,6 +62,7 @@ export interface MusicianProfileInput {
   availabilities: { jourSemaine: string; creneauxJournee: 'matin' | 'apres-midi' | 'soir' }[];
   bio?: string;
   zone: ZoneInput;
+  showcaseGroups: MusicianShowcaseGroup[];
 }
 
 export interface MusicianProfile extends MusicianProfileInput { id: string; }

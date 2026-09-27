@@ -14,6 +14,7 @@ function buildInput(overrides: Partial<CreateGroupInput> = {}): CreateGroupInput
     description: 'Un groupe de test',
     audioLinks: [],
     zone: { latitude: 48.5734, longitude: 7.7521, rayonKm: 20, ville: 'Strasbourg' },
+    requestedInstruments: [{ instrument: 'basse', niveau: 'intermediaire' }],
     ...overrides,
   };
 }

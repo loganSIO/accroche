@@ -4,6 +4,7 @@ import type {
   MusicianInstrument,
   MusicianStyle,
   Availability,
+  MusicianShowcaseGroup,
   Zone,
 } from '@prisma/client';
 
@@ -11,6 +12,7 @@ type MusicianProfileWithRelations = MusicianProfile & {
   instruments: MusicianInstrument[];
   styles: MusicianStyle[];
   availabilities: Availability[];
+  showcaseGroups?: MusicianShowcaseGroup[];
   zone: Zone;
 };
 
@@ -38,5 +40,12 @@ export function toMusicianCandidate(record: MusicianProfileWithRelations): Music
     status: record.status.toLowerCase() as 'amateur' | 'pro',
     objective: record.objective,
     bio: record.bio ?? undefined,
+    showcaseGroups: (record.showcaseGroups ?? []).map((group) => ({
+      name: group.name,
+      city: group.city,
+      position: group.position,
+      status: group.status.toLowerCase() as 'association' | 'professionnel',
+      description: group.description,
+    })),
   };
 }

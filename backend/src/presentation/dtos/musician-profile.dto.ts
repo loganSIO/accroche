@@ -18,6 +18,14 @@ export class MusicianProfileAvailabilityDto {
   @IsIn(['matin', 'apres-midi', 'soir']) creneauxJournee!: 'matin' | 'apres-midi' | 'soir';
 }
 
+export class MusicianShowcaseGroupDto {
+  @IsString() name!: string;
+  @IsString() city!: string;
+  @IsString() position!: string;
+  @IsIn(['association', 'professionnel']) status!: 'association' | 'professionnel';
+  @IsString() description!: string;
+}
+
 export class CreateMusicianProfileDto {
   @IsString() musicianName!: string;
   @IsIn(['amateur', 'pro']) status!: 'amateur' | 'pro';
@@ -29,6 +37,8 @@ export class CreateMusicianProfileDto {
   availabilities!: MusicianProfileAvailabilityDto[];
   @IsOptional() @IsString() bio?: string;
   @ValidateNested() @Type(() => MusicianProfileZoneDto) zone!: MusicianProfileZoneDto;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => MusicianShowcaseGroupDto)
+  showcaseGroups?: MusicianShowcaseGroupDto[];
 }
 
 export class UpdateMusicianProfileDto {
@@ -42,4 +52,6 @@ export class UpdateMusicianProfileDto {
   availabilities?: MusicianProfileAvailabilityDto[];
   @IsOptional() @IsString() bio?: string;
   @IsOptional() @ValidateNested() @Type(() => MusicianProfileZoneDto) zone?: MusicianProfileZoneDto;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => MusicianShowcaseGroupDto)
+  showcaseGroups?: MusicianShowcaseGroupDto[];
 }

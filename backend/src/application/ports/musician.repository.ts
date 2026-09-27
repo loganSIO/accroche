@@ -12,6 +12,7 @@ export interface CreateMusicianInput {
   styles: string[];
   availabilities: { jourSemaine: string; creneauxJournee: string }[];
   zone: { latitude: number; longitude: number; rayonKm: number; ville: string };
+  showcaseGroups?: { name: string; city: string; position: string; status: 'association' | 'professionnel'; description: string }[];
 }
 
 export interface MusicianRepository {

@@ -103,11 +103,25 @@ model MusicianProfile {
   instruments      MusicianInstrument[]
   styles           MusicianStyle[]
   availabilities   Availability[]
+  showcaseGroups  MusicianShowcaseGroup[]
   matches          Match[]
   foundingProfiles FoundingProfile[]
   contacts         Contact[]
 
   @@map("musician_profiles")
+}
+
+model MusicianShowcaseGroup {
+  id                String         @id @default(uuid())
+  musicianProfileId String
+  musicianProfile   MusicianProfile @relation(fields: [musicianProfileId], references: [id], onDelete: Cascade)
+  name              String
+  city              String
+  position          String
+  status            GroupStatus
+  description       String
+
+  @@map("musician_showcase_groups")
 }
 
 model MusicianInstrument {

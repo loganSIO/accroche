@@ -31,6 +31,7 @@ export class AccountPrismaRepository {
             instruments: { create: input.musician.instruments },
             styles: { create: input.musician.styles.map((style) => ({ style })) },
             availabilities: { create: input.musician.availabilities },
+            showcaseGroups: { create: [] },
           },
         })
         : null;
