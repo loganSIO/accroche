@@ -8,7 +8,10 @@ export function useMatches(musicianId: string | null) {
   const [isLoading, setIsLoading] = useState(musicianId !== null);
   useEffect(() => {
     if (!musicianId) return;
-    getMatches(musicianId).then(setMatches).catch(setError).finally(() => setIsLoading(false));
+    getMatches(musicianId)
+      .then((nextMatches) => setMatches(nextMatches.slice(0, 5)))
+      .catch(setError)
+      .finally(() => setIsLoading(false));
   }, [musicianId]);
   return { matches: musicianId ? matches : [], error, isLoading };
 }

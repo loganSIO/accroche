@@ -105,6 +105,44 @@ describe('MusicianProfileController', () => {
     }]);
   });
 
+  it('recalcule les matchs des postes existants après création du profil', async () => {
+    const groupUser = await prisma.user.create({
+      data: { email: 'group@example.com', password: 'hash', city: 'Strasbourg' },
+    });
+    const zone = await prisma.zone.create({
+      data: { latitude: input.zone.latitude, longitude: input.zone.longitude, rayonKm: 20, ville: 'Strasbourg' },
+    });
+    const group = await prisma.groupProfile.create({
+      data: {
+        userId: groupUser.id,
+        zoneId: zone.id,
+        name: 'Groupe existant',
+        styles: ['rock'],
+        status: 'ASSOCIATION',
+        audioLinks: [],
+        positions: {
+          create: [{
+            ownerType: 'GROUP',
+            instrumentRecherche: 'guitare',
+            niveauAttendu: 'avance',
+          }],
+        },
+      },
+    });
+
+    const request = { user: { userId } } as never;
+    await controller.create(request, input);
+
+    const match = await prisma.match.findFirst({
+      where: { musicianId: (await prisma.musicianProfile.findUnique({ where: { userId } }))!.id },
+      include: { position: true },
+    });
+    expect(match).toMatchObject({
+      position: { groupProfileId: group.id },
+      scoreGlobal: 100,
+    });
+  });
+
   it('retourne une erreur si le profil est absent', async () => {
     const request = { user: { userId } } as never;
 

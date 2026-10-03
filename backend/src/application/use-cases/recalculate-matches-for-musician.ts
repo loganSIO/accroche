@@ -1,4 +1,7 @@
-import { calculateMatch } from '../../domain/services/calculate-match.service.js';
+import {
+  calculateMatch,
+  MINIMUM_MATCH_SCORE,
+} from '../../domain/services/calculate-match.service.js';
 import type { MusicianRepository } from '../ports/musician.repository.js';
 import type { OpenPositionRepository } from '../ports/open-position.repository.js';
 import type { MatchRepository } from '../ports/match.repository.js';
@@ -25,6 +28,10 @@ export class RecalculateMatchesForMusician {
 
     for (const position of positions) {
       const result = calculateMatch(musician, position);
+
+      if (!result || result.scoreGlobal <= MINIMUM_MATCH_SCORE) {
+        continue;
+      }
 
       await this.matchRepository.upsert({
         musicianId: musician.id,

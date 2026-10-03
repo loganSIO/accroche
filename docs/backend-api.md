@@ -190,6 +190,26 @@ afin de ne pas publier la position exacte d'un profil.
 
 ## Matchs
 
+Le matching utilise uniquement les critères actuellement disponibles :
+
+1. l'instrument est obligatoire ; un instrument incompatible ne produit aucun
+   match ;
+2. le niveau est comparé uniquement sur l'instrument recherché
+   (`debutant=1`, `intermediaire=2`, `avance=3`, `expert=4`) et contribue à
+   hauteur de 30 % ;
+3. le style mesure la proportion des styles du groupe retrouvés chez le
+   musicien et contribue à hauteur de 40 % ;
+4. la zone exige que la distance soit comprise dans le rayon du musicien et
+   dans celui du groupe, puis contribue à hauteur de 30 % avec une décroissance
+   progressive selon la distance.
+
+La formule est donc `niveau * 0,30 + styles * 0,40 + zone * 0,30`. Un score
+strictement supérieur à 50 est nécessaire pour qu'un résultat soit persisté
+comme match ; un score inférieur ou égal à 50 n'est pas retenu. La
+disponibilité, l'objectif, le statut amateur/professionnel et les autres
+informations non comparables ne participent pas au calcul du MVP. La liste
+retournée pour un musicien est limitée aux cinq meilleurs scores.
+
 ### `GET /musicians/:id/matches`
 
 Retourne les matchs calculés pour un musicien, triés par score décroissant.

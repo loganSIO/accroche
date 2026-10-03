@@ -10,6 +10,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { MusicianPrismaRepository } from '../../infrastructure/repositories/musician-prisma.repository.js';
+import { OpenPositionPrismaRepository } from '../../infrastructure/repositories/open-position-prisma.repository.js';
+import { MatchPrismaRepository } from '../../infrastructure/repositories/match-prisma.repository.js';
+import { RecalculateMatchesForMusician } from '../../application/use-cases/recalculate-matches-for-musician.js';
 import { AccessTokenGuard, type AuthenticatedRequest } from '../guards/access-token.guard.js';
 import {
   CreateMusicianProfileDto,
@@ -20,6 +23,11 @@ import {
 @UseGuards(AccessTokenGuard)
 export class MusicianProfileController {
   private readonly musicians = new MusicianPrismaRepository();
+  private readonly recalculateMatches = new RecalculateMatchesForMusician(
+    this.musicians,
+    new OpenPositionPrismaRepository(),
+    new MatchPrismaRepository(),
+  );
 
   @Get()
   async get(@Req() request: AuthenticatedRequest) {
@@ -36,6 +44,7 @@ export class MusicianProfileController {
       throw new ConflictException('Un profil musicien existe déjà pour cet utilisateur.');
     }
     const profile = await this.musicians.createForUser(request.user.userId, dto);
+    await this.recalculateMatches.execute(profile.id);
     return this.response(profile);
   }
 
@@ -45,6 +54,7 @@ export class MusicianProfileController {
     if (!profile) {
       throw new NotFoundException('Profil musicien introuvable.');
     }
+    await this.recalculateMatches.execute(profile.id);
     return this.response(profile);
   }
 
