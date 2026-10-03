@@ -2,26 +2,17 @@ import type { MusicianCandidate, NiveauMusicien } from '../entities/musician.ent
 import type { OpenPositionCandidate } from '../entities/open-position.entity.js';
 import type { MatchResult, MatchSubScores } from '../entities/match.entity.js';
 
-// Pondérations fixes pour le MVP. Exposées comme constante plutôt qu'en dur
-// dans le calcul, pour permettre plus tard des pondérations personnalisables
-// par utilisateur sans réécrire la logique de sous-scores.
-export const DEFAULT_WEIGHTS: MatchSubScores = {
-    // Faut ajuster les poids ou la logique de calcul, le métier est pas bon là (batteur 70/30,
-    // alors qu'ils cherchent un guitariste)
-  instrument: 0.3,
-  style: 0.25,
-  zone: 0.2,
-  disponibilite: 0.15,
-  // Niveau a 0.1, wtf ?
-  niveau: 0.1,
+// L'instrument et la zone sont des critères d'éligibilité. Les seuls critères
+// agrégés sont donc le niveau, les styles et la zone.
+export const DEFAULT_WEIGHTS = {
+  niveau: 0.3,
+  style: 0.4,
+  zone: 0.3,
 };
 
-const NIVEAU_ORDER: NiveauMusicien[] = ['debutant', 'intermediaire', 'avance', 'expert'];
+export const MINIMUM_MATCH_SCORE = 50;
 
-function scoreInstrument(musician: MusicianCandidate, position: OpenPositionCandidate): number {
-  const joue = musician.instruments.some((i) => i.instrument === position.instrumentRecherche);
-  return joue ? 100 : 0;
-}
+const NIVEAU_ORDER: NiveauMusicien[] = ['debutant', 'intermediaire', 'avance', 'expert'];
 
 function scoreStyle(musician: MusicianCandidate, position: OpenPositionCandidate): number {
   if (position.stylesGroupe.length === 0) return 100;
@@ -46,18 +37,23 @@ function distanceKm(
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function scoreZone(musician: MusicianCandidate, position: OpenPositionCandidate): number {
+function scoreZone(
+  musician: MusicianCandidate,
+  position: OpenPositionCandidate,
+): { compatible: boolean; score: number } {
   const distance = distanceKm(musician.zone, position.zone);
-  const rayon = position.zone.rayonKm;
+  const rayonEffectif = Math.min(musician.zone.rayonKm, position.zone.rayonKm);
 
-  if (distance >= rayon) return 0;
-  return Math.round((1 - distance / rayon) * 100);
-}
-
-function scoreDisponibilite(musician: MusicianCandidate): number {
-  // Version simple pour le MVP : au moins une disponibilité déclarée = score
-  // plein. Affiné plus tard si le poste exprime des créneaux précis.
-  return musician.availabilities.length > 0 ? 100 : 0;
+  if (distance > musician.zone.rayonKm || distance > position.zone.rayonKm) {
+    return { compatible: false, score: 0 };
+  }
+  if (rayonEffectif === 0) {
+    return { compatible: true, score: distance === 0 ? 100 : 0 };
+  }
+  return {
+    compatible: true,
+    score: Math.round((1 - distance / rayonEffectif) * 100),
+  };
 }
 
 function scoreNiveau(musician: MusicianCandidate, position: OpenPositionCandidate): number {
@@ -77,21 +73,29 @@ function scoreNiveau(musician: MusicianCandidate, position: OpenPositionCandidat
 export function calculateMatch(
   musician: MusicianCandidate,
   position: OpenPositionCandidate,
-): MatchResult {
+): MatchResult | null {
+  const instrumentCompatible = musician.instruments.some(
+    (instrument) => instrument.instrument === position.instrumentRecherche,
+  );
+  if (!instrumentCompatible) return null;
+
+  const zone = scoreZone(musician, position);
+  if (!zone.compatible) return null;
+
   const sousScores: MatchSubScores = {
-    instrument: scoreInstrument(musician, position),
+    instrument: 100,
     style: scoreStyle(musician, position),
-    zone: scoreZone(musician, position),
-    disponibilite: scoreDisponibilite(musician),
+    zone: zone.score,
+    // Conservé pour compatibilité avec le schéma/API historique, mais
+    // volontairement exclu du calcul tant que le poste n'a pas de créneaux.
+    disponibilite: 0,
     niveau: scoreNiveau(musician, position),
   };
 
   const scoreGlobal = Math.round(
-    sousScores.instrument * DEFAULT_WEIGHTS.instrument +
+    sousScores.niveau * DEFAULT_WEIGHTS.niveau +
       sousScores.style * DEFAULT_WEIGHTS.style +
-      sousScores.zone * DEFAULT_WEIGHTS.zone +
-      sousScores.disponibilite * DEFAULT_WEIGHTS.disponibilite +
-      sousScores.niveau * DEFAULT_WEIGHTS.niveau,
+      sousScores.zone * DEFAULT_WEIGHTS.zone,
   );
 
   return {
