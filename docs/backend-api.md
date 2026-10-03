@@ -25,6 +25,23 @@ elles retournent :
 }
 ```
 
+### `GET /health`
+
+Endpoint public de vérification de disponibilité du backend, notamment utilisé
+par Render. Il répond sans authentification avec :
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Le service doit être configuré dans Render avec `Health Check Path=/health`.
+
+En production, le CORS est limité aux origines déclarées dans `FRONTEND_URL`
+ou `FRONTEND_URLS` (liste séparée par des virgules). En développement, les
+origines `localhost` restent autorisées.
+
 Les routes protégées attendent :
 
 ```http

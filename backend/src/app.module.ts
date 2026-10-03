@@ -15,6 +15,7 @@ import { MusicianProfileController } from './presentation/controllers/musician-p
 import { UserGroupsController } from './presentation/controllers/user-groups.controller.js';
 import { PublicProfilesController } from './presentation/controllers/public-profiles.controller.js';
 import { MessagingController } from './presentation/controllers/messaging.controller.js';
+import { HealthController } from './presentation/controllers/health.controller.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { MessagingController } from './presentation/controllers/messaging.contro
     UserGroupsController,
     PublicProfilesController,
     MessagingController,
+    HealthController,
   ],
   providers: [AppService, AccessTokenGuard],
 })
